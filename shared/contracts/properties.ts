@@ -11,6 +11,16 @@ export type PropertyType =
   | 'other'
   | 'unknown';
 
+export type FurnishingStatus =
+  | 'furnished'
+  | 'semi_furnished'
+  | 'unfurnished';
+
+export type ExtractionStatus =
+  | 'success'
+  | 'partial'
+  | 'unsupported';
+
 export interface ExtractListingRequestDto {
   description: string;
 }
@@ -21,12 +31,17 @@ export interface ExtractedPropertyListingDto {
   bathrooms: number | null;
   monthly_rent: number | null;
   currency: string | null;
+  security_deposit: number | null;
+  deposit_months: number | null;
+  utilities_included: boolean | null;
+  furnishing_status: FurnishingStatus | null;
   neighborhood: string | null;
   city: string | null;
   amenities: string[];
   availability: string | null;
   title_suggestion: string | null;
   raw_description: string;
+  extraction_status: ExtractionStatus;
   unextracted_or_missing_fields: string[];
   confidence_notes: string | null;
 }

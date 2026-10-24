@@ -10,8 +10,10 @@ from rentvision_ai.exceptions import (
 )
 from rentvision_ai.schemas import (
     EvidenceSupportStatus,
+    ExtractionStatus,
     ExtractedDocument,
     ExtractedPropertyListing,
+    FurnishingStatus,
     LeaseChunk,
     LeaseQARequest,
     LeaseQAResponse,
@@ -38,8 +40,10 @@ __version__ = "0.1.0"
 __all__ = [
     "BM25Retriever",
     "EvidenceSupportStatus",
+    "ExtractionStatus",
     "ExtractedDocument",
     "ExtractedPropertyListing",
+    "FurnishingStatus",
     "InvalidInputError",
     "InvalidPDFError",
     "LLMAuthenticationError",
