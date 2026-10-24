@@ -56,3 +56,23 @@ All request/response payloads must adhere to shared schemas defined in [`shared/
 
 ### 3. Unit and Handler Testing
 Individual Lambda handler functions will be tested using Vitest or Jest by injecting mock `APIGatewayProxyEvent` objects and verifying `APIGatewayProxyResult` responses.
+
+## Listings search implementation
+
+The first backend slice is implemented without an AWS dependency so it can be tested independently:
+
+- Shared listing and search DTOs: [`../../shared/contracts/listings.ts`](../../shared/contracts/listings.ts)
+- Query parsing and contract validation: [`src/utils/search-validation.ts`](src/utils/search-validation.ts)
+- Consistent API errors: [`src/utils/errors.ts`](src/utils/errors.ts)
+- Haversine distance, visibility filtering, sorting, and pagination: [`src/services/geospatial-search.ts`](src/services/geospatial-search.ts)
+
+An API Gateway handler should:
+
+1. Read `event.queryStringParameters`.
+2. Call `parseSearchQuery(...)`.
+3. Load listings from DynamoDB through a repository.
+4. Call `searchListings(listings, query, actor)`.
+5. Return the result as JSON with status `200`.
+6. Convert `ApiError` with `errorBody(...)`; unexpected errors should be logged and returned as the standard `500` response.
+
+The in-memory search function is intentionally separate from DynamoDB access. DynamoDB should use a geohash or H3 cell index to narrow candidates first; exact Haversine filtering must still happen in `searchListings` so radius boundaries are accurate.
