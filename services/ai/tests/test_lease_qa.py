@@ -13,7 +13,7 @@ from rentvision_ai.exceptions import (
     LLMTimeoutError,
 )
 from rentvision_ai.schemas.document import ExtractedDocument, PDFPage
-from rentvision_ai.schemas.lease_qa import EvidenceSupportStatus, LeaseQARequest
+from rentvision_ai.schemas.lease_qa import EvidenceSupportStatus, LeaseChunk, LeaseQARequest
 from rentvision_ai.services.lease_qa import LeaseQAService
 from rentvision_ai.services.retriever import BM25Retriever, chunk_document
 
@@ -85,6 +85,119 @@ class TestRetrieverAndChunking:
         results = retriever.retrieve("quantum physics orbital satellite telescope", top_k=3)
         assert len(results) == 0
 
+    def test_numeric_comma_normalization_matches_formatted_currency(self, sample_lease_document: ExtractedDocument) -> None:
+        chunks = chunk_document(sample_lease_document)
+        retriever = BM25Retriever(chunks)
+
+        # Query uses 50000 unformatted, chunk has 50,000
+        results = retriever.retrieve("Is rent 50000 ETB per month?", top_k=1)
+        assert len(results) > 0
+        top_chunk, score = results[0]
+        assert top_chunk.page_number == 1
+        assert "50,000 ETB" in top_chunk.text
+        assert score > 0.0
+
+    def test_negation_words_preserved_in_retrieval(self) -> None:
+        # Negation words like 'not' should distinguish permitted vs not permitted
+        chunk_permitted = LeaseChunk(
+            chunk_id="p1_c0",
+            page_number=1,
+            text="Subletting: Subletting is permitted with prior written consent of the landlord.",
+            char_start=0,
+            char_end=80,
+        )
+        chunk_forbidden = LeaseChunk(
+            chunk_id="p1_c1",
+            page_number=1,
+            text="Subletting: Subletting is not permitted under any circumstances or conditions.",
+            char_start=81,
+            char_end=165,
+        )
+        retriever = BM25Retriever([chunk_permitted, chunk_forbidden])
+
+        results = retriever.retrieve("Is subletting not permitted?", top_k=2)
+        assert len(results) == 2
+        # Chunk with 'not permitted' should rank first
+        assert results[0][0].chunk_id == "p1_c1"
+        assert "not permitted" in results[0][0].text
+
+    def test_domain_stemming_normalizes_lease_terms(self) -> None:
+        chunk = LeaseChunk(
+            chunk_id="p1_c0",
+            page_number=1,
+            text="Tenant paid rental utilities deposit upon signing.",
+            char_start=0,
+            char_end=55,
+        )
+        retriever = BM25Retriever([chunk])
+
+        # Query uses inflected variants: 'pay', 'rent', 'utility'
+        results = retriever.retrieve("pay rent utility", top_k=1)
+        assert len(results) == 1
+        assert results[0][1] > 0.0
+
+    def test_ethiopic_unicode_tokenization_and_retrieval(self) -> None:
+        ethiopic_text = "የኪራይ ውል ስምምነት በወር 25000 ብር"
+        doc = ExtractedDocument(
+            filename="amharic_lease.pdf",
+            page_count=1,
+            pages=[
+                PDFPage(
+                    page_number=1,
+                    text=ethiopic_text,
+                    char_count=len(ethiopic_text),
+                    word_count=5,
+                )
+            ],
+            full_text=ethiopic_text,
+            has_extractable_text=True,
+        )
+        chunks = chunk_document(doc)
+        assert len(chunks) == 1
+        retriever = BM25Retriever(chunks)
+
+        results = retriever.retrieve("የኪራይ ውል", top_k=1)
+        assert len(results) == 1
+        assert results[0][1] > 0.0
+
+    def test_cross_chunk_boundary_overlap_preserves_clause(self) -> None:
+        # Long text that produces multiple chunks
+        long_paragraph = (
+            "Clause 1: The tenant shall maintain premises in clean condition. "
+            "Clause 2: The monthly utility surcharge is 1,500 ETB for generator fuel. "
+            "Clause 3: Termination requires sixty days advance notice in writing. "
+            "Clause 4: Late payment of rent incurs a penalty of five percent. "
+            "Clause 5: Landlord reserves right of inspection with 24 hours notice."
+        )
+        doc = ExtractedDocument(
+            filename="long_lease.pdf",
+            page_count=1,
+            pages=[
+                PDFPage(
+                    page_number=1,
+                    text=long_paragraph,
+                    char_count=len(long_paragraph),
+                    word_count=60,
+                )
+            ],
+            full_text=long_paragraph,
+            has_extractable_text=True,
+        )
+        # Target small chunks so sentences split across chunks with overlap
+        chunks = chunk_document(doc, target_chunk_chars=180, chunk_overlap_chars=90)
+        assert len(chunks) >= 2
+
+        # Verify that consecutive chunks share text (overlap)
+        has_overlap = False
+        for i in range(len(chunks) - 1):
+            c1_words = set(chunks[i].text.split())
+            c2_words = set(chunks[i + 1].text.split())
+            common_words = c1_words.intersection(c2_words)
+            if len(common_words) >= 3:
+                has_overlap = True
+                break
+        assert has_overlap, "Consecutive chunks must share overlapping text"
+
 
 class TestLeaseQAService:
     """Lease QA service tests."""
@@ -143,12 +256,12 @@ class TestLeaseQAService:
         assert "does not contain information" in response.answer
         assert len(response.citations) == 0
 
-    def test_zero_matching_passages_returns_unsupported_without_llm_call(
+    def test_zero_matching_passages_with_fallback_disabled_skips_llm_call(
         self,
         sample_lease_document: ExtractedDocument,
     ) -> None:
         client = MockLLMClient(default_response="Should not be called")
-        service = LeaseQAService(client=client)
+        service = LeaseQAService(client=client, enable_small_doc_fallback=False)
 
         response = service.answer_question(
             question="How many space rockets and interstellar probes are docked in the orbital hangar?",
@@ -159,6 +272,39 @@ class TestLeaseQAService:
         assert response.has_sufficient_evidence is False
         assert len(response.citations) == 0
         assert len(client.call_history) == 0  # Early return without model call
+
+    def test_large_document_zero_matching_passages_skips_llm_call(self) -> None:
+        # Create a document larger than MAX_FALLBACK_DOCUMENT_CHARS (12,000 chars)
+        pages = [
+            PDFPage(
+                page_number=i,
+                text=f"Page {i} of commercial warehouse lease agreement terms and regulations. " * 30,
+                char_count=len(f"Page {i} of commercial warehouse lease agreement terms and regulations. " * 30),
+                word_count=240,
+            )
+            for i in range(1, 12)
+        ]
+        large_doc = ExtractedDocument(
+            filename="large_lease.pdf",
+            page_count=len(pages),
+            pages=pages,
+            full_text="\n\n".join(p.text for p in pages),
+            has_extractable_text=True,
+        )
+        assert sum(len(p.text) for p in pages) > 12_000
+
+        client = MockLLMClient(default_response="Should not be called")
+        service = LeaseQAService(client=client, enable_small_doc_fallback=True)
+
+        response = service.answer_question(
+            question="How many extraterrestrial spacecraft are registered to dock?",
+            document=large_doc,
+        )
+
+        assert response.status == EvidenceSupportStatus.UNSUPPORTED
+        assert response.has_sufficient_evidence is False
+        assert len(response.citations) == 0
+        assert len(client.call_history) == 0  # Large document does not dump text to LLM
 
     def test_empty_or_whitespace_question_raises_invalid_input_error(
         self,
@@ -479,3 +625,91 @@ class TestLeaseQAService:
 
         with pytest.raises(LLMResponseParsingError, match="schema validation failed"):
             service.answer_question("What is the rent?", sample_lease_document)
+
+    def test_fabricated_citation_with_common_words_rejected(
+        self,
+        sample_lease_document: ExtractedDocument,
+    ) -> None:
+        # Excerpt shares common words ("This Agreement is entered into by") from page 1,
+        # but introduces fabricated legal obligations and monetary penalties.
+        fabricated_excerpt = (
+            "This Agreement is entered into by parties and obligates Tenant to pay 250,000 ETB unauthorized guest penalty"
+        )
+        mock_output = json.dumps({
+            "answer": "Tenant must pay 250,000 ETB penalty for unauthorized guests.",
+            "status": "supported",
+            "citations": [
+                {
+                    "page_number": 1,
+                    "excerpt": fabricated_excerpt,
+                }
+            ],
+            "confidence_notes": "Stated on page 1."
+        })
+        client = MockLLMClient(default_response=mock_output)
+        service = LeaseQAService(client=client)
+
+        response = service.answer_question("What are the agreement terms regarding rent?", sample_lease_document)
+
+        # The citation MUST be rejected because 250,000 does not exist on page 1 and overlap is under 85%
+        assert len(response.citations) == 0
+        assert response.status == EvidenceSupportStatus.PARTIALLY_SUPPORTED
+        assert response.has_sufficient_evidence is False
+        assert "could not be substantiated" in str(response.confidence_notes).lower()
+
+    def test_small_document_zero_score_fallback_handles_paraphrase(
+        self,
+        sample_lease_document: ExtractedDocument,
+    ) -> None:
+        # Query uses terms not in BM25 vocabulary ("individuals signing this contract")
+        # but the small document allows controlled fallback to answer from page 1.
+        mock_output = json.dumps({
+            "answer": "The agreement is between Abebe Bikila (Landlord) and Almaz Ayana (Tenant) for 12 months.",
+            "status": "supported",
+            "citations": [
+                {
+                    "page_number": 1,
+                    "excerpt": "This Agreement is entered into by Abebe Bikila (Landlord) and Almaz Ayana (Tenant)."
+                }
+            ],
+            "confidence_notes": "Identified from page 1 terms."
+        })
+        client = MockLLMClient(default_response=mock_output)
+        service = LeaseQAService(client=client, enable_small_doc_fallback=True)
+
+        response = service.answer_question(
+            question="Who are the individuals signing this contract?",
+            document=sample_lease_document,
+        )
+
+        assert response.status == EvidenceSupportStatus.SUPPORTED
+        assert response.has_sufficient_evidence is True
+        assert len(response.citations) == 1
+        assert response.citations[0].page_number == 1
+        assert "Abebe Bikila" in response.citations[0].excerpt
+        assert "fallback applied" in str(response.confidence_notes).lower()
+
+    def test_small_document_zero_score_fallback_handles_unsupported_query(
+        self,
+        sample_lease_document: ExtractedDocument,
+    ) -> None:
+        # Query with 0 BM25 score where small document fallback runs, and model accurately
+        # determines that the lease does not support the inquiry.
+        mock_output = json.dumps({
+            "answer": "The provided lease agreement does not contain information to answer this question.",
+            "status": "unsupported",
+            "citations": [],
+            "confidence_notes": "No spacecraft or hangar facilities mentioned."
+        })
+        client = MockLLMClient(default_response=mock_output)
+        service = LeaseQAService(client=client, enable_small_doc_fallback=True)
+
+        response = service.answer_question(
+            question="How many space rockets and interstellar probes are docked in the orbital hangar?",
+            document=sample_lease_document,
+        )
+
+        assert response.status == EvidenceSupportStatus.UNSUPPORTED
+        assert response.has_sufficient_evidence is False
+        assert len(response.citations) == 0
+        assert "does not contain information" in response.answer

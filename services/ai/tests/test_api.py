@@ -346,6 +346,38 @@ class TestLeaseQAEndpoint:
         finally:
             app.dependency_overrides.clear()
 
+    def test_lease_qa_pdf_exceeding_page_limit_returns_400(
+        self,
+        test_client: TestClient,
+    ) -> None:
+        doc = fitz.open()
+        for _ in range(35):
+            doc.new_page()
+        pdf_bytes = doc.tobytes()
+        doc.close()
+        b64 = base64.b64encode(pdf_bytes).decode("ascii")
+
+        res = test_client.post(
+            "/api/v1/lease-qa",
+            json={"question": "What is the rent?", "pdf_base64": b64},
+        )
+        assert res.status_code == 400
+        assert "exceeding the maximum allowed limit of 30 pages" in res.json()["detail"]
+
+    def test_lease_qa_pdf_exceeding_byte_limit_returns_400(
+        self,
+        test_client: TestClient,
+    ) -> None:
+        oversized_bytes = b"%PDF-1.4 " + (b"0" * 20_000_100)
+        oversized_b64 = base64.b64encode(oversized_bytes).decode("ascii")
+
+        res = test_client.post(
+            "/api/v1/lease-qa",
+            json={"question": "What is the rent?", "pdf_base64": oversized_b64},
+        )
+        assert res.status_code == 400
+        assert "exceeds maximum allowed file size of 20 MB" in res.json()["detail"]
+
 
 class TestMockModeEnvironment:
     """Mock mode environment tests."""
