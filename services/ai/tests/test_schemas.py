@@ -2,12 +2,25 @@
 
 import pytest
 from pydantic import ValidationError
-from rentvision_ai.schemas.property import ExtractedPropertyListing, PropertyType
+from rentvision_ai.schemas.property import (
+    ExtractedPropertyListing,
+    ExtractionStatus,
+    FurnishingStatus,
+    PropertyType,
+)
 from rentvision_ai.schemas.document import ExtractedDocument, PDFPage
 
 
 class TestPropertyListingSchema:
     """Tests for ExtractedPropertyListing and PropertyType schemas."""
+
+    def test_furnishing_status_parsing_and_synonyms(self) -> None:
+        assert FurnishingStatus("furnished") == FurnishingStatus.FURNISHED
+        assert FurnishingStatus("fully furnished") == FurnishingStatus.FURNISHED
+        assert FurnishingStatus("semi-furnished") == FurnishingStatus.SEMI_FURNISHED
+        assert FurnishingStatus("semi furnished") == FurnishingStatus.SEMI_FURNISHED
+        assert FurnishingStatus("unfurnished") == FurnishingStatus.UNFURNISHED
+        assert FurnishingStatus("non-furnished") == FurnishingStatus.UNFURNISHED
 
     def test_property_type_parsing_and_synonyms(self) -> None:
         assert PropertyType("apartment") == PropertyType.APARTMENT
@@ -75,6 +88,20 @@ class TestPropertyListingSchema:
 
         l5 = ExtractedPropertyListing(raw_description="test", currency=None)
         assert l5.currency is None
+
+    def test_furnishing_normalization_and_amenity_exclusion(self) -> None:
+        listing = ExtractedPropertyListing(
+            raw_description="test",
+            furnishing_status="semi-furnished",
+            amenities=["Generator", "Furnished", "Utilities Included", "2 Months Deposit", "Balcony"],
+        )
+        assert listing.furnishing_status == FurnishingStatus.SEMI_FURNISHED
+        assert listing.amenities == ["Generator", "Balcony"]
+
+        l2 = ExtractedPropertyListing(raw_description="test", furnishing_status="unknown")
+        assert l2.furnishing_status is None
+        l3 = ExtractedPropertyListing(raw_description="test", furnishing_status=None)
+        assert l3.furnishing_status is None
 
     def test_negative_values_rejected(self) -> None:
         with pytest.raises(ValidationError):
