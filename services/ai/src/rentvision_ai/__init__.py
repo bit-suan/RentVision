@@ -1,9 +1,3 @@
-"""RentVision AI Service package root.
-
-This package provides data models, document extraction utilities,
-and AI processing interfaces for the RentVision platform.
-"""
-
 from rentvision_ai.exceptions import (
     RentVisionAIError,
     InvalidInputError,
@@ -15,10 +9,15 @@ from rentvision_ai.exceptions import (
     InvalidPDFError,
 )
 from rentvision_ai.schemas import (
-    ExtractedPropertyListing,
-    PropertyType,
+    EvidenceSupportStatus,
     ExtractedDocument,
+    ExtractedPropertyListing,
+    LeaseChunk,
+    LeaseQARequest,
+    LeaseQAResponse,
     PDFPage,
+    PropertyType,
+    SourceCitation,
 )
 from rentvision_ai.clients import (
     LLMClient,
@@ -27,29 +26,40 @@ from rentvision_ai.clients import (
     get_default_llm_client,
 )
 from rentvision_ai.services import (
+    BM25Retriever,
+    LeaseQAService,
     ListingExtractionService,
     PDFExtractionService,
+    chunk_document,
 )
 
 __version__ = "0.1.0"
 
 __all__ = [
-    "RentVisionAIError",
-    "InvalidInputError",
-    "LLMProviderError",
-    "LLMAuthenticationError",
-    "LLMTimeoutError",
-    "LLMResponseParsingError",
-    "PDFExtractionError",
-    "InvalidPDFError",
-    "ExtractedPropertyListing",
-    "PropertyType",
+    "BM25Retriever",
+    "EvidenceSupportStatus",
     "ExtractedDocument",
-    "PDFPage",
+    "ExtractedPropertyListing",
+    "InvalidInputError",
+    "InvalidPDFError",
+    "LLMAuthenticationError",
     "LLMClient",
+    "LLMProviderError",
+    "LLMResponseParsingError",
+    "LLMTimeoutError",
+    "LeaseChunk",
+    "LeaseQARequest",
+    "LeaseQAResponse",
+    "LeaseQAService",
+    "ListingExtractionService",
     "MockLLMClient",
     "OpenAIClient",
-    "get_default_llm_client",
-    "ListingExtractionService",
+    "PDFExtractionError",
     "PDFExtractionService",
+    "PDFPage",
+    "PropertyType",
+    "RentVisionAIError",
+    "SourceCitation",
+    "chunk_document",
+    "get_default_llm_client",
 ]
