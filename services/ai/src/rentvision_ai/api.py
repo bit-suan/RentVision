@@ -87,7 +87,7 @@ class LeaseQAPayload(BaseModel):
     )
     pdf_base64: str | None = Field(
         default=None,
-        max_length=50_000_000,
+        max_length=30_000_000,
         description="Base64-encoded raw PDF document bytes.",
     )
     document_text: str | None = Field(
@@ -229,6 +229,13 @@ def create_app() -> FastAPI:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail="Supplied 'pdf_base64' data is not a valid PDF document (missing %PDF- header).",
+                    )
+
+                # Enforce file size limit (20 MB)
+                if len(pdf_bytes) > 20_000_000:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Uploaded PDF exceeds maximum allowed file size of 20 MB.",
                     )
 
                 return service.answer_from_pdf_bytes(

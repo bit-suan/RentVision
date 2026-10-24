@@ -156,3 +156,21 @@ class TestPDFExtractionService:
     ) -> None:
         with pytest.raises(InvalidPDFError, match="does not exist"):
             pdf_service.extract_from_path("non_existent_directory/missing_lease.pdf")
+
+    def test_exceeding_max_pages_raises_invalid_pdf_error(self) -> None:
+        doc = fitz.open()
+        for _ in range(6):
+            doc.new_page()
+        pdf_bytes = doc.tobytes()
+        doc.close()
+
+        # Configure service with max_pages=5
+        service = PDFExtractionService(max_pages=5)
+        with pytest.raises(InvalidPDFError, match="exceeding the maximum allowed limit of 5 pages"):
+            service.extract_from_bytes(pdf_bytes, filename="six_pages.pdf")
+
+    def test_exceeding_max_bytes_raises_invalid_pdf_error(self) -> None:
+        service = PDFExtractionService(max_bytes=500)
+        oversized_bytes = b"%PDF-1.4 " + (b"A" * 600)
+        with pytest.raises(InvalidPDFError, match="exceeds maximum allowed size of 500 bytes"):
+            service.extract_from_bytes(oversized_bytes, filename="oversized.pdf")

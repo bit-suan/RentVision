@@ -79,8 +79,9 @@ def _sanitize_boundary_tags(text: str) -> str:
 
 
 def _normalize_for_matching(text: str) -> str:
-    """Normalize text for whitespace- and punctuation-insensitive matching."""
-    return " ".join(re.findall(r"\w+", text.lower()))
+    """Normalize text for whitespace-, punctuation-, and formatted-number-insensitive matching."""
+    cleaned = re.sub(r"(?<=\d),(?=\d)", "", text)
+    return " ".join(re.findall(r"\w+", cleaned.lower()))
 
 
 class LeaseQAService:
@@ -90,14 +91,18 @@ class LeaseQAService:
         "The provided lease agreement does not contain information to answer this question."
     )
     MAX_QUESTION_LENGTH = 1000
+    MAX_FALLBACK_DOCUMENT_CHARS = 12_000
+    MAX_FALLBACK_CHUNKS = 8
 
     def __init__(
         self,
         client: LLMClient | None = None,
         pdf_service: PDFExtractionService | None = None,
+        enable_small_doc_fallback: bool = True,
     ):
         self._client = client or get_default_llm_client()
         self._pdf_service = pdf_service or PDFExtractionService()
+        self.enable_small_doc_fallback = enable_small_doc_fallback
 
     @property
     def client(self) -> LLMClient:
@@ -168,19 +173,29 @@ class LeaseQAService:
         retriever = BM25Retriever(chunks)
         scored_results = retriever.retrieve(clean_question, top_k=top_k)
 
+        is_fallback = False
         if not scored_results:
-            # No keyword matches found in contract
-            return LeaseQAResponse(
-                question=clean_question,
-                answer=self.INSUFFICIENT_EVIDENCE_ANSWER,
-                status=EvidenceSupportStatus.UNSUPPORTED,
-                citations=[],
-                retrieved_passages_count=0,
-                has_sufficient_evidence=False,
-                confidence_notes="No passages in the lease document match the keywords of this inquiry.",
-            )
-
-        retrieved_chunks = [chunk for chunk, _score in scored_results]
+            # Controlled fallback for small documents when BM25 score is 0 due to vocabulary mismatch
+            total_chars = sum(len(c.text) for c in chunks)
+            if (
+                self.enable_small_doc_fallback
+                and total_chars <= self.MAX_FALLBACK_DOCUMENT_CHARS
+                and len(chunks) <= self.MAX_FALLBACK_CHUNKS
+            ):
+                retrieved_chunks = chunks[:min(top_k, len(chunks))]
+                is_fallback = True
+            else:
+                return LeaseQAResponse(
+                    question=clean_question,
+                    answer=self.INSUFFICIENT_EVIDENCE_ANSWER,
+                    status=EvidenceSupportStatus.UNSUPPORTED,
+                    citations=[],
+                    retrieved_passages_count=0,
+                    has_sufficient_evidence=False,
+                    confidence_notes="No passages in the lease document match the keywords of this inquiry.",
+                )
+        else:
+            retrieved_chunks = [chunk for chunk, _score in scored_results]
 
         # Format prompt context with XML boundaries and sanitized content
         passages_formatted: list[str] = []
@@ -216,6 +231,7 @@ class LeaseQAService:
             question=clean_question,
             retrieved_chunks=retrieved_chunks,
             page_texts=page_texts,
+            is_fallback=is_fallback,
         )
 
     def answer_from_pdf_bytes(
@@ -270,6 +286,7 @@ class LeaseQAService:
         question: str,
         retrieved_chunks: list[LeaseChunk],
         page_texts: dict[int, str],
+        is_fallback: bool = False,
     ) -> LeaseQAResponse:
         """Validate model output, verify citations strictly against document text, and enforce evidence status."""
         raw_status = str(parsed_payload.get("status", "")).strip().lower()
@@ -325,24 +342,31 @@ class LeaseQAService:
                     if not norm_excerpt:
                         continue
 
+                    # Strict citation grounding check
                     is_grounded = False
                     if norm_excerpt in norm_page:
                         is_grounded = True
                     else:
-                        # Check continuous word slice if exact match failed on edge punctuation
                         excerpt_words = norm_excerpt.split()
-                        if len(excerpt_words) >= 4:
-                            for window_size in (5, 4):
-                                if is_grounded:
-                                    break
-                                for idx in range(len(excerpt_words) - window_size + 1):
-                                    subseq = " ".join(excerpt_words[idx : idx + window_size])
-                                    if subseq in norm_page:
-                                        is_grounded = True
+                        # Short quotes (<= 4 words) must be an exact match
+                        if len(excerpt_words) > 4:
+                            # Verify that any numbers mentioned in the excerpt exist on the page
+                            excerpt_numbers = set(re.findall(r"\b\d+\b", norm_excerpt))
+                            page_numbers = set(re.findall(r"\b\d+\b", norm_page))
+                            if excerpt_numbers.issubset(page_numbers):
+                                # Require high-confidence sequential overlap (>= 85% of excerpt words)
+                                min_match_len = max(5, int(len(excerpt_words) * 0.85))
+                                for window_len in range(len(excerpt_words), min_match_len - 1, -1):
+                                    for idx in range(len(excerpt_words) - window_len + 1):
+                                        subseq = " ".join(excerpt_words[idx : idx + window_len])
+                                        if subseq in norm_page:
+                                            is_grounded = True
+                                            break
+                                    if is_grounded:
                                         break
 
                     if not is_grounded:
-                        # Skip unverified citation
+                        # Skip unverified or fabricated citation
                         continue
 
                     # Deduplicate citations
@@ -356,13 +380,17 @@ class LeaseQAService:
                     chunks_on_page = page_chunks.get(p_num, [])
                     for chk in chunks_on_page:
                         norm_chk = _normalize_for_matching(chk.text)
-                        if norm_excerpt in norm_chk or any(
-                            " ".join(norm_excerpt.split()[:4]) in norm_chk
-                            for _ in [1]
-                            if len(norm_excerpt.split()) >= 4
-                        ):
+                        if norm_excerpt in norm_chk:
                             matching_chunk_id = chk.chunk_id
                             break
+                        else:
+                            excerpt_words = norm_excerpt.split()
+                            if len(excerpt_words) >= 4:
+                                min_chk_len = max(4, int(len(excerpt_words) * 0.80))
+                                sub = " ".join(excerpt_words[:min_chk_len])
+                                if sub in norm_chk:
+                                    matching_chunk_id = chk.chunk_id
+                                    break
 
                     valid_citations.append(
                         SourceCitation(
@@ -381,16 +409,29 @@ class LeaseQAService:
                 else:
                     confidence_notes = verification_note
 
+        if is_fallback:
+            if status in (EvidenceSupportStatus.SUPPORTED, EvidenceSupportStatus.PARTIALLY_SUPPORTED) and valid_citations:
+                fallback_note = "Retrieval fallback applied for semantic phrasing."
+                if confidence_notes:
+                    confidence_notes = f"{confidence_notes} {fallback_note}"
+                else:
+                    confidence_notes = fallback_note
+            elif status != EvidenceSupportStatus.UNSUPPORTED:
+                # Fallback did not yield verified evidence
+                status = EvidenceSupportStatus.UNSUPPORTED
+                raw_answer = self.INSUFFICIENT_EVIDENCE_ANSWER
+                valid_citations = []
+
         # Normalize response for unsupported inquiries
         if status == EvidenceSupportStatus.UNSUPPORTED:
             if not raw_answer or self.INSUFFICIENT_EVIDENCE_ANSWER.lower() in raw_answer.lower():
                 raw_answer = self.INSUFFICIENT_EVIDENCE_ANSWER
             valid_citations = []
 
-        # Mark sufficient evidence if supported or explicitly conflicting
-        has_sufficient_evidence = status in (
-            EvidenceSupportStatus.SUPPORTED,
-            EvidenceSupportStatus.CONFLICTING,
+        # Mark sufficient evidence if supported or explicitly conflicting and verified citations exist
+        has_sufficient_evidence = (
+            status in (EvidenceSupportStatus.SUPPORTED, EvidenceSupportStatus.CONFLICTING)
+            and bool(valid_citations)
         )
 
         return LeaseQAResponse(

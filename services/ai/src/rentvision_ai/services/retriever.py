@@ -6,29 +6,71 @@ from typing import Sequence
 from rentvision_ai.schemas.document import ExtractedDocument
 from rentvision_ai.schemas.lease_qa import LeaseChunk
 
-# Common stop words
+# Common stop words, preserving negation terms critical for legal contracts (no, nor, not)
 STOP_WORDS: set[str] = {
     "a", "about", "above", "after", "again", "against", "all", "am", "an", "and",
-    "any", "are", "aren't", "as", "at", "be", "because", "been", "before", "being",
-    "below", "between", "both", "but", "by", "can", "cannot", "could", "couldn't",
-    "did", "didn't", "do", "does", "doesn't", "doing", "don't", "down", "during",
-    "each", "few", "for", "from", "further", "had", "hadn't", "has", "hasn't",
-    "have", "haven't", "having", "he", "her", "here", "hers", "herself", "him",
-    "himself", "his", "how", "i", "if", "in", "into", "is", "isn't", "it", "it's",
-    "its", "itself", "let's", "me", "more", "most", "mustn't", "my", "myself", "no",
-    "nor", "not", "of", "off", "on", "once", "only", "or", "other", "ought", "our",
-    "ours", "ourselves", "out", "over", "own", "same", "shan't", "she", "should",
-    "shouldn't", "so", "some", "such", "than", "that", "the", "their", "theirs",
+    "any", "are", "as", "at", "be", "because", "been", "before", "being",
+    "below", "between", "both", "but", "by", "can", "could",
+    "did", "do", "does", "doing", "down", "during",
+    "each", "few", "for", "from", "further", "had", "has",
+    "have", "having", "he", "her", "here", "hers", "herself", "him",
+    "himself", "his", "how", "i", "if", "in", "into", "is", "it", "it's",
+    "its", "itself", "let's", "me", "more", "most", "my", "myself",
+    "of", "off", "on", "once", "only", "or", "other", "ought", "our",
+    "ours", "ourselves", "out", "over", "own", "same", "she", "should",
+    "so", "some", "such", "than", "that", "the", "their", "theirs",
     "them", "themselves", "then", "there", "these", "they", "this", "those",
-    "through", "to", "too", "under", "until", "up", "very", "was", "wasn't", "we",
-    "were", "weren't", "what", "when", "where", "which", "while", "who", "whom",
-    "why", "with", "won't", "would", "wouldn't", "you", "your", "yours", "yourself",
+    "through", "to", "too", "under", "until", "up", "very", "was", "we",
+    "were", "what", "when", "where", "which", "while", "who", "whom",
+    "why", "with", "would", "you", "your", "yours", "yourself",
+}
+
+# Domain stem normalization for high-frequency lease terms
+DOMAIN_STEMS: dict[str, str] = {
+    "paid": "pay",
+    "payment": "pay",
+    "payments": "pay",
+    "paying": "pay",
+    "rental": "rent",
+    "renting": "rent",
+    "rented": "rent",
+    "rents": "rent",
+    "sublease": "sublet",
+    "subleasing": "sublet",
+    "subletting": "sublet",
+    "sublets": "sublet",
+    "utility": "util",
+    "utilities": "util",
+    "termination": "termin",
+    "terminate": "termin",
+    "terminating": "termin",
+    "terminated": "termin",
+    "prohibited": "prohibit",
+    "prohibition": "prohibit",
+    "permitted": "permit",
+    "permission": "permit",
+    "permits": "permit",
+    "refundable": "refund",
+    "refunded": "refund",
+    "refunding": "refund",
+    "refunds": "refund",
+    "deposit": "deposit",
+    "deposited": "deposit",
+    "deposits": "deposit",
+    "clause": "claus",
+    "clauses": "claus",
+    "monthly": "month",
+    "annual": "year",
+    "annually": "year",
+    "yearly": "year",
 }
 
 
 def stem_token(word: str) -> str:
-    """Lightweight rule-based suffix normalization for English tokens."""
+    """Normalize English tokens using domain stems and morphological rules."""
     w = word.lower()
+    if w in DOMAIN_STEMS:
+        return DOMAIN_STEMS[w]
     if len(w) <= 3:
         return w
     if w.endswith("ies") and len(w) > 4:
@@ -49,8 +91,11 @@ def stem_token(word: str) -> str:
 
 
 def tokenize(text: str) -> list[str]:
-    """Tokenize text into lowercase stemmed tokens excluding common stop words."""
-    raw_tokens = re.findall(r"\b[a-zA-Z0-9_\$€]+\b", text.lower())
+    """Tokenize text into lowercase stemmed tokens, normalizing numbers and supporting Ethiopic."""
+    # Normalize comma-formatted numbers so '48,000' matches '48000'
+    normalized_text = re.sub(r"(?<=\d),(?=\d)", "", text)
+    # Match alphanumeric words, currency symbols, and Ethiopic Unicode characters (\u1200-\u137F)
+    raw_tokens = re.findall(r"[a-zA-Z0-9_\$€\u1200-\u137F]+", normalized_text.lower())
     tokens: list[str] = []
     for t in raw_tokens:
         if t not in STOP_WORDS and len(t) > 1:
@@ -63,16 +108,7 @@ def chunk_document(
     target_chunk_chars: int = 600,
     chunk_overlap_chars: int = 80,
 ) -> list[LeaseChunk]:
-    """Split document pages into chunks while preserving page numbers.
-    
-    Args:
-        document: The ExtractedDocument containing pages with page numbers.
-        target_chunk_chars: Approximate target character length for each chunk.
-        chunk_overlap_chars: Overlap character length between sequential chunks on same page.
-        
-    Returns:
-        List of LeaseChunk objects maintaining exact page number provenance.
-    """
+    """Split document pages into chunks with sentence-boundary snapping and actual text overlap."""
     chunks: list[LeaseChunk] = []
 
     for page in document.pages:
@@ -80,80 +116,81 @@ def chunk_document(
         if not page_text:
             continue
 
-        paragraphs = [p.strip() for p in re.split(r"\n\s*\n", page_text) if p.strip()]
-        if not paragraphs:
-            paragraphs = [page_text]
+        raw_blocks = [p.strip() for p in re.split(r"\n\s*\n", page_text) if p.strip()]
+        if not raw_blocks:
+            raw_blocks = [page_text]
+
+        # Break blocks larger than target length on sentence boundaries (. ! ? ; or newline)
+        units: list[str] = []
+        for block in raw_blocks:
+            if len(block) > target_chunk_chars:
+                sents = [s.strip() for s in re.split(r"(?<=[.!?;\n])\s+", block) if s.strip()]
+                units.extend(sents if sents else [block])
+            else:
+                units.append(block)
 
         chunk_idx = 0
-        current_text = ""
-        current_start = 0
+        current_units: list[str] = []
+        current_len = 0
+        last_search_pos = 0
 
-        for para in paragraphs:
-            # Split when target length is reached
-            if current_text and (len(current_text) + len(para) + 2 > target_chunk_chars) and len(current_text) >= 120:
-                c_id = f"p{page.page_number}_c{chunk_idx}"
-                pos = page_text.find(current_text, current_start)
-                start_offset = pos if pos >= 0 else current_start
-                end_offset = start_offset + len(current_text)
+        for unit in units:
+            unit_len = len(unit)
+            if current_units and (current_len + unit_len + 2 > target_chunk_chars) and current_len >= 120:
+                chunk_text = "\n\n".join(current_units)
+                pos = page_text.find(chunk_text, last_search_pos)
+                if pos < 0:
+                    pos = page_text.find(current_units[0], last_search_pos)
+                start_offset = pos if pos >= 0 else last_search_pos
+                end_offset = start_offset + len(chunk_text)
 
+                if not chunks or chunks[-1].text != chunk_text:
+                    chunks.append(
+                        LeaseChunk(
+                            chunk_id=f"p{page.page_number}_c{chunk_idx}",
+                            page_number=page.page_number,
+                            text=chunk_text,
+                            char_start=max(0, start_offset),
+                            char_end=max(0, end_offset),
+                        )
+                    )
+                    chunk_idx += 1
+                last_search_pos = max(0, start_offset)
+
+                # Seed next chunk with trailing units to provide genuine text overlap
+                overlap_units: list[str] = []
+                overlap_len = 0
+                for u in reversed(current_units):
+                    if overlap_len + len(u) <= chunk_overlap_chars or not overlap_units:
+                        overlap_units.insert(0, u)
+                        overlap_len += len(u) + 2
+                    else:
+                        break
+
+                current_units = list(overlap_units)
+                current_len = sum(len(u) for u in current_units) + max(0, len(current_units) - 1) * 2
+
+            current_units.append(unit)
+            current_len += unit_len + 2
+
+        if current_units:
+            chunk_text = "\n\n".join(current_units)
+            pos = page_text.find(chunk_text, last_search_pos)
+            if pos < 0:
+                pos = page_text.find(current_units[0], last_search_pos)
+            start_offset = pos if pos >= 0 else last_search_pos
+            end_offset = start_offset + len(chunk_text)
+
+            if not chunks or chunks[-1].text != chunk_text:
                 chunks.append(
                     LeaseChunk(
-                        chunk_id=c_id,
+                        chunk_id=f"p{page.page_number}_c{chunk_idx}",
                         page_number=page.page_number,
-                        text=current_text,
+                        text=chunk_text,
                         char_start=max(0, start_offset),
                         char_end=max(0, end_offset),
                     )
                 )
-                chunk_idx += 1
-                current_start = max(0, end_offset - chunk_overlap_chars)
-                current_text = ""
-
-            if len(para) > target_chunk_chars:
-                # Handle oversized paragraphs with a sliding window
-                start = 0
-                while start < len(para):
-                    end = min(start + target_chunk_chars, len(para))
-                    slice_text = para[start:end].strip()
-                    if slice_text:
-                        c_id = f"p{page.page_number}_c{chunk_idx}"
-                        pos = page_text.find(slice_text, current_start)
-                        start_offset = pos if pos >= 0 else current_start
-                        end_offset = start_offset + len(slice_text)
-
-                        chunks.append(
-                            LeaseChunk(
-                                chunk_id=c_id,
-                                page_number=page.page_number,
-                                text=slice_text,
-                                char_start=max(0, start_offset),
-                                char_end=max(0, end_offset),
-                            )
-                        )
-                        chunk_idx += 1
-                        current_start = max(0, end_offset - chunk_overlap_chars)
-                    start += max(1, target_chunk_chars - chunk_overlap_chars)
-                current_text = ""
-            else:
-                if current_text:
-                    current_text += "\n\n" + para
-                else:
-                    current_text = para
-
-        if current_text:
-            c_id = f"p{page.page_number}_c{chunk_idx}"
-            pos = page_text.find(current_text, current_start)
-            start_offset = pos if pos >= 0 else current_start
-            end_offset = start_offset + len(current_text)
-            chunks.append(
-                LeaseChunk(
-                    chunk_id=c_id,
-                    page_number=page.page_number,
-                    text=current_text,
-                    char_start=max(0, start_offset),
-                    char_end=max(0, end_offset),
-                )
-            )
 
     return chunks
 
