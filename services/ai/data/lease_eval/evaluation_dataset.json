@@ -1,0 +1,69 @@
+{
+  "document": {
+    "filename": "bole_apartment_standard_lease.pdf",
+    "pages": [
+      {
+        "page_number": 1,
+        "text": "STANDARD RESIDENTIAL LEASE AGREEMENT\n\nPARTIES & PREMISES\nThis Lease Agreement is made on October 15, 2026, between Landlord: Dawit Haile, and Tenant: Bethlehem Tadesse.\nThe Landlord agrees to rent to the Tenant the residential apartment located at: Apartment 3C, Cameroon Street, Bole Subcity, Addis Ababa, Ethiopia.\n\nLEASE TERM & RENT\nThe term of this lease shall be for twelve (12) calendar months, commencing on November 1, 2026, and terminating on October 31, 2027.\nThe monthly rent shall be 48,000 ETB (Ethiopian Birr), payable in advance on or before the first (1st) day of each calendar month via direct bank transfer to Landlord's designated account."
+      },
+      {
+        "page_number": 2,
+        "text": "SECURITY DEPOSIT & UTILITIES\n\nSECURITY DEPOSIT\nUpon signing this Agreement, Tenant shall pay a security deposit of 96,000 ETB (equivalent to two months' rent).\nThe security deposit shall be held by Landlord and returned in full within thirty (30) days of vacating the premises, subject to physical inspection for damages beyond normal wear and tear.\n\nUTILITY RESPONSIBILITIES\nRent includes: Monthly municipal water service, 24/7 security guard, and shared backup generator fuel charges.\nTenant is solely responsible for: Private internet subscription, interior electricity consumed via personal meter, and satellite TV service."
+      },
+      {
+        "page_number": 3,
+        "text": "MAINTENANCE, RESTRICTIONS & TERMINATION\n\nMAINTENANCE OBLIGATIONS\nLandlord is responsible for structural repairs, plumbing lines, and external building maintenance.\nTenant shall be responsible for routine interior upkeep, light fixtures, and any damage caused by negligence.\n\nTERMINATION & NOTICE\nEither party may terminate this agreement upon providing sixty (60) days advance written notice.\nSubleasing is strictly prohibited without the express prior written consent of the Landlord."
+      }
+    ]
+  },
+  "queries": [
+    {
+      "id": "q1_rent",
+      "question": "What is the monthly rent and when is it due?",
+      "expected_status": "supported",
+      "expected_page_citations": [1],
+      "key_grounded_facts": ["48,000 ETB", "first (1st) day", "advance"],
+      "notes": "Direct answer on Page 1 under Term & Rent."
+    },
+    {
+      "id": "q2_deposit",
+      "question": "How much is the security deposit and what are the refund conditions?",
+      "expected_status": "supported",
+      "expected_page_citations": [2],
+      "key_grounded_facts": ["96,000 ETB", "two months", "thirty (30) days"],
+      "notes": "Direct answer on Page 2 under Security Deposit."
+    },
+    {
+      "id": "q3_utilities",
+      "question": "Does the landlord pay for backup generator fuel and internet?",
+      "expected_status": "supported",
+      "expected_page_citations": [2],
+      "key_grounded_facts": ["generator fuel", "includes", "internet", "Tenant is solely responsible"],
+      "notes": "Direct answer on Page 2 showing generator included, internet tenant responsibility."
+    },
+    {
+      "id": "q4_subleasing",
+      "question": "Is subleasing allowed under this lease?",
+      "expected_status": "supported",
+      "expected_page_citations": [3],
+      "key_grounded_facts": ["strictly prohibited", "prior written consent"],
+      "notes": "Direct answer on Page 3."
+    },
+    {
+      "id": "q5_pets_unsupported",
+      "question": "Are dogs or cats permitted in the apartment?",
+      "expected_status": "unsupported",
+      "expected_page_citations": [],
+      "key_grounded_facts": ["does not contain information"],
+      "notes": "Negative test: pets are completely unmentioned in the contract."
+    },
+    {
+      "id": "q6_late_fee_unsupported",
+      "question": "What is the penalty fee if rent is paid 5 days late?",
+      "expected_status": "unsupported",
+      "expected_page_citations": [],
+      "key_grounded_facts": ["does not contain information"],
+      "notes": "Negative test: late payment fee percentage is omitted in this agreement."
+    }
+  ]
+}
