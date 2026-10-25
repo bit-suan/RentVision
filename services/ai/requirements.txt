@@ -7,8 +7,13 @@ pydantic>=2.7.0,<3.0.0
 # Document processing and PDF text extraction for lease documents
 PyMuPDF>=1.24.0,<2.0.0
 
+# HTTP API server and ASGI runtime
+fastapi>=0.111.0,<1.0.0
+uvicorn[standard]>=0.30.0,<1.0.0
+
 # Development and testing dependencies
 pytest>=8.0.0,<9.0.0
 pytest-asyncio>=0.23.0,<1.0.0
+httpx>=0.27.0,<1.0.0
 mypy>=1.10.0,<2.0.0
 hypothesis>=6.100.0
