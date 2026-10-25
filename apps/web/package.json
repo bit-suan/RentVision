@@ -2,16 +2,22 @@
   "name": "web",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run check:i18n && next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "jest"
+    "check:i18n": "node scripts/validate-catalogs.mjs",
+    "translate:i18n": "node scripts/translate-catalogs.mjs",
+    "scan:pages": "node scripts/scan-pages.mjs",
+    "test:i18n": "npm run check:i18n && node --test tests/locale.test.mjs",
+    "test": "jest && npm run test:i18n"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
     "next": "16.4.2",
+    "next-intl": "^4.14.9",
     "pannellum": "^2.5.7",
     "react": "19.3.0",
     "react-dom": "19.3.0"

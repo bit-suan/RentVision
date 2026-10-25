@@ -1,4 +1,30 @@
 export type ListingStatus = "approved" | "pending" | "rejected";
+export type ListingAvailability = "AVAILABLE" | "COMING_SOON" | "OCCUPIED";
+
+export interface GeoCoordinates {
+  latitude: number;
+  longitude: number;
+}
+
+export interface PanoramaHotspot {
+  id: string;
+  pitch: number;
+  yaw: number;
+  text?: string;
+  type?: "SCENE" | "INFO";
+  targetPanoramaId?: string;
+}
+
+export interface PanoramaConfig {
+  deliveryUrl: string;
+  title?: string;
+  initialView?: {
+    yaw?: number;
+    pitch?: number;
+    hfov?: number;
+  };
+  hotspots?: PanoramaHotspot[];
+}
 
 export interface Hotspot {
   id: string;

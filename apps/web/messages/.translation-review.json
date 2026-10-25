@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-10-25T18:40:37.592Z",
+  "translatedCount": 4,
+  "reviewEntries": [
+    {
+      "key": "PropertyDetail.unableToLoad",
+      "en": "Unable to load listing",
+      "am": "ዝርዝሩን መጫን አልተቻለም"
+    },
+    {
+      "key": "PropertyDetail.openTour",
+      "en": "Open 360° tour",
+      "am": "የ360° ጉብኝት ይክፈቱ"
+    },
+    {
+      "key": "PropertyDetail.askTheLease",
+      "en": "Ask the lease",
+      "am": "ውሉን ይጠይቁ"
+    },
+    {
+      "key": "PropertyDetail.perMonth",
+      "en": "{price} {currency} / month",
+      "am": "{price} {currency} / month"
+    }
+  ]
+}

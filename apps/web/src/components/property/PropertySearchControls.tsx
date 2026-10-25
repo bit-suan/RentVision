@@ -1,13 +1,13 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/routing";
+import { useTranslations } from "next-intl";
 import type { FormEvent } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import type { PropertySearchFilters } from "@/lib/property-search";
 import { PROPERTY_AVAILABILITIES } from "@/lib/property-search";
-import { formatPropertyAvailability } from "@/lib/property-formatting";
 
 interface PropertySearchControlsProps {
   filters: PropertySearchFilters;
@@ -21,6 +21,9 @@ export default function PropertySearchControls({
   propertyTypes,
 }: PropertySearchControlsProps) {
   const router = useRouter();
+  const t = useTranslations("SearchControls");
+  const tAvail = useTranslations("Availability");
+  const tType = useTranslations("PropertyTypes");
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -47,29 +50,29 @@ export default function PropertySearchControls({
         <Input
           defaultValue={filters.query ?? ""}
           id="property-query"
-          label="Search by keyword or location"
+          label={t("queryLabel")}
           name="q"
-          placeholder="Try Bole or apartment"
+          placeholder={t("queryPlaceholder")}
         />
-        <Button type="submit">Search</Button>
+        <Button type="submit">{t("search")}</Button>
       </div>
 
       <fieldset className="property-filter-grid">
-        <legend>Filter properties</legend>
+        <legend>{t("filterLegend")}</legend>
         <Select
           defaultValue={filters.location ?? ""}
           id="property-location"
-          label="Location"
+          label={t("locationLabel")}
           name="location"
           options={[
-            { label: "Any location", value: "" },
+            { label: t("anyLocation"), value: "" },
             ...locations.map((location) => ({ label: location, value: location })),
           ]}
         />
         <Input
           defaultValue={filters.minimumPrice ?? ""}
           id="property-minimum-price"
-          label="Minimum price (ETB/month)"
+          label={t("minPriceLabel")}
           min={0}
           name="minimumPrice"
           type="number"
@@ -77,7 +80,7 @@ export default function PropertySearchControls({
         <Input
           defaultValue={filters.maximumPrice ?? ""}
           id="property-maximum-price"
-          label="Maximum price (ETB/month)"
+          label={t("maxPriceLabel")}
           min={0}
           name="maximumPrice"
           type="number"
@@ -85,12 +88,12 @@ export default function PropertySearchControls({
         <Select
           defaultValue={filters.minimumBedrooms?.toString() ?? ""}
           id="property-bedrooms"
-          label="Bedrooms"
+          label={t("bedroomsLabel")}
           name="minimumBedrooms"
           options={[
-            { label: "Any bedrooms", value: "" },
+            { label: t("anyBedrooms"), value: "" },
             ...[1, 2, 3, 4].map((count) => ({
-              label: `${count}+ bedrooms`,
+              label: t("bedroomsOption", { count }),
               value: count.toString(),
             })),
           ]}
@@ -98,12 +101,12 @@ export default function PropertySearchControls({
         <Select
           defaultValue={filters.propertyType ?? ""}
           id="property-type"
-          label="Property type"
+          label={t("propertyTypeLabel")}
           name="propertyType"
           options={[
-            { label: "Any type", value: "" },
+            { label: t("anyPropertyType"), value: "" },
             ...propertyTypes.map((propertyType) => ({
-              label: propertyType,
+              label: tType.has(propertyType) ? tType(propertyType) : propertyType,
               value: propertyType,
             })),
           ]}
@@ -111,12 +114,12 @@ export default function PropertySearchControls({
         <Select
           defaultValue={filters.availability ?? ""}
           id="property-availability"
-          label="Availability"
+          label={t("availabilityLabel")}
           name="availability"
           options={[
-            { label: "Any availability", value: "" },
+            { label: t("anyAvailability"), value: "" },
             ...PROPERTY_AVAILABILITIES.map((availability) => ({
-              label: formatPropertyAvailability(availability),
+              label: tAvail.has(availability) ? tAvail(availability) : availability,
               value: availability,
             })),
           ]}
@@ -124,19 +127,19 @@ export default function PropertySearchControls({
         <Select
           defaultValue={filters.sort ?? ""}
           id="property-sort"
-          label="Sort by price"
+          label={t("sortLabel")}
           name="sort"
           options={[
-            { label: "Recommended", value: "" },
-            { label: "Price: low to high", value: "price-asc" },
-            { label: "Price: high to low", value: "price-desc" },
+            { label: t("sortRecommended"), value: "" },
+            { label: t("sortPriceAsc"), value: "price-asc" },
+            { label: t("sortPriceDesc"), value: "price-desc" },
           ]}
         />
       </fieldset>
 
       <div className="property-search-panel__actions">
         <Button onClick={clearFilters} type="button" variant="quiet">
-          Clear filters
+          {t("clearFilters")}
         </Button>
       </div>
     </form>

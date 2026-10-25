@@ -139,6 +139,10 @@ class ExtractedPropertyListing(BaseModel):
         default=None,
         description="Explanatory notes regarding uncertainties, ambiguities, contradictions, or missing info."
     )
+    detected_language: str | None = Field(
+        default=None,
+        description="Detected language of input description ('en' or 'am')."
+    )
 
     @field_validator("furnishing_status", mode="before")
     @classmethod

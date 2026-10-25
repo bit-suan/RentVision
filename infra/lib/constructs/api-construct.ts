@@ -64,8 +64,9 @@ export class RentVisionApi extends Construct {
   constructor(scope: Construct, id: string, props: RentVisionApiProps) {
     super(scope, id);
 
-    // Path to the Lambda handler source code
-    const handlersPath = path.join(__dirname, '..', '..', '..', 'services', 'api', 'src', 'handlers');
+    // Path to the Lambda handler source code and API package root
+    const apiPath = path.join(__dirname, '..', '..', '..', 'services', 'api');
+    const handlersPath = path.join(apiPath, 'src', 'handlers');
 
     // Common Lambda configuration
     const lambdaDefaults: Partial<lambdaNodejs.NodejsFunctionProps> = {
@@ -74,6 +75,8 @@ export class RentVisionApi extends Construct {
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
       tracing: lambda.Tracing.ACTIVE,
+      projectRoot: apiPath,
+      depsLockFilePath: path.join(apiPath, 'package-lock.json'),
       bundling: {
         minify: true,
         sourceMap: true,

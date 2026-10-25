@@ -1,4 +1,5 @@
 import type { PropertyCoordinates } from "@/lib/properties";
+import { useTranslations } from "next-intl";
 
 interface PropertyLocationProps {
   location: string;
@@ -9,21 +10,20 @@ export default function PropertyLocation({
   location,
   coordinates,
 }: PropertyLocationProps) {
+  const t = useTranslations("PropertyLocation");
+
   return (
     <section
       aria-labelledby="property-location-heading"
       className="detail-panel property-location"
     >
-      <h2 id="property-location-heading">Location</h2>
+      <h2 id="property-location-heading">{t("heading")}</h2>
       <address>{location}</address>
       <div aria-live="polite" className="location-preview">
         {coordinates ? (
-          <p>A map preview will be available in the map integration phase.</p>
+          <p>{t("mapPreviewAvailable")}</p>
         ) : (
-          <p>
-            Map preview is unavailable because this listing does not include
-            geographic coordinates yet.
-          </p>
+          <p>{t("mapPreviewUnavailable")}</p>
         )}
       </div>
     </section>
