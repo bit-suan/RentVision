@@ -1,5 +1,5 @@
 import * as fc from 'fast-check';
-import { getTour, TourScene } from './tours';
+import { getTour } from './tours';
 
 describe('Tour lib property tests', () => {
   // Feature: rentvision-platform, Property 7: Tour scene structure completeness

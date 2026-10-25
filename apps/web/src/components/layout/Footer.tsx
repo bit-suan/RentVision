@@ -1,6 +1,6 @@
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
+import { useTranslations } from "next-intl";
 
-// Replace these placeholders with confirmed contact details before enabling links.
 const contactPhone = "+251 XX XXX XXXX";
 const contactEmail = "hello@rentvision.com";
 
@@ -31,6 +31,8 @@ function ContactIcon({ type }: { type: "phone" | "email" | "location" }) {
 }
 
 export default function Footer() {
+  const t = useTranslations("Footer");
+
   return (
     <footer className="site-footer">
       <div className="site-footer__inner">
@@ -38,16 +40,16 @@ export default function Footer() {
           <div className="site-footer__main">
             <div className="site-footer__identity">
               <p className="site-footer__brand">RentVision</p>
-              <p className="site-footer__tagline">Find a place you can trust.</p>
-              <nav aria-label="Footer navigation" className="site-footer__nav">
-                <Link href="/">Home</Link>
-                <Link href="/properties">Properties</Link>
-                <Link href="/map">Map</Link>
+              <p className="site-footer__tagline">{t("tagline")}</p>
+              <nav aria-label={t("navAria")} className="site-footer__nav">
+                <Link href="/">{t("home")}</Link>
+                <Link href="/properties">{t("properties")}</Link>
+                <Link href="/map">{t("map")}</Link>
               </nav>
             </div>
 
             <section aria-labelledby="footer-contact-heading" className="site-footer__contact">
-              <h2 id="footer-contact-heading">Contact</h2>
+              <h2 id="footer-contact-heading">{t("contact")}</h2>
               <ul>
                 <li>
                   <ContactIcon type="phone" />
@@ -59,15 +61,15 @@ export default function Footer() {
                 </li>
                 <li>
                   <ContactIcon type="location" />
-                  <span>Addis Ababa, Ethiopia</span>
+                  <span>{t("location")}</span>
                 </li>
               </ul>
             </section>
           </div>
-          <p className="site-footer__copyright">© 2026 RentVision. All rights reserved.</p>
+          <p className="site-footer__copyright">{t("copyright")}</p>
         </div>
 
-        <p className="site-footer__legacy">Copyright 2026 RentVision. All rights reserved.</p>
+        <p className="site-footer__legacy">{t("legacyCopyright")}</p>
       </div>
     </footer>
   );
