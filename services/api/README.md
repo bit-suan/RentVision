@@ -13,7 +13,15 @@ RentVision leverages a fully serverless, event-driven AWS architecture:
   - `property-media`: Standard photos, floor plans, and interactive 360° panoramic equirectangular images.
   - `lease-documents`: Encrypted, private storage for rental agreements and PDF leases accessed via pre-signed URLs.
 
-> **Status Notice**: In this repository setup phase, no application endpoints, database models, or live cloud resources have been created. This directory establishes the architectural boundaries and local development conventions.
+Handlers for listings, media, and leases live in `src/handlers`. For local work without AWS credentials:
+
+```bash
+npm install
+npm test
+npm run start:local
+```
+
+The local server listens on `http://localhost:3001`, seeds Addis Ababa demo listings, and uses an in-memory store (`DATA_STORE=memory`).
 
 ## Target Directory Layout
 

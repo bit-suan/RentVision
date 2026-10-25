@@ -1,22 +1,29 @@
 import type { Metadata } from "next";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
+import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "RentVision",
-  description: "AI-powered rental discovery and trust platform",
+  description:
+    "Find rentals in Addis Ababa with map search, 360° tours, and lease Q&A.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en">
-      <body className="app-body">
-        <Header />
-
-        <main className="site-main">{children}</main>
-
-        <Footer />
+      <body>
+        <div className="app-shell">
+          <header className="topbar">
+            <Link href="/" className="brand">
+              <strong>RentVision</strong>
+              <span>Addis Ababa rentals, mapped and inspectable</span>
+            </Link>
+            <Link className="button secondary" href="/">
+              Map search
+            </Link>
+          </header>
+          {children}
+        </div>
       </body>
     </html>
   );

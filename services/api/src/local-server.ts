@@ -1,0 +1,185 @@
+import { createServer, IncomingMessage, ServerResponse } from 'http';
+import { URL } from 'url';
+import { APIGatewayProxyEvent } from 'aws-lambda';
+import { handler as listingsHandler } from './handlers/listings';
+import { handler as mediaHandler } from './handlers/media';
+import { handler as leasesHandler } from './handlers/leases';
+import { getLocalObject, putLocalObject } from './data';
+import { loadDemoListings } from './data/seed';
+
+process.env.DATA_STORE = process.env.DATA_STORE || 'memory';
+process.env.API_LOCAL_MODE = 'true';
+
+const PORT = Number(process.env.API_PORT || 3001);
+const CORS_ORIGIN = process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:3000';
+
+loadDemoListings();
+
+function setCors(res: ServerResponse): void {
+  res.setHeader('Access-Control-Allow-Origin', CORS_ORIGIN);
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'
+  );
+}
+
+function readBody(req: IncomingMessage): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
+
+function toEvent(
+  req: IncomingMessage,
+  url: URL,
+  body: string | null
+): APIGatewayProxyEvent {
+  const query: Record<string, string> = {};
+  url.searchParams.forEach((value, key) => {
+    query[key] = value;
+  });
+
+  const pathParameters: Record<string, string> = {};
+  const parts = url.pathname.replace(/^\/+|\/+$/g, '').split('/');
+  if (parts[0] === 'api' && parts[1] === 'v1') {
+    parts.splice(0, 2);
+  }
+  if (parts[0] === 'listings' && parts[1] && parts[1] !== 'search') {
+    pathParameters.id = parts[1];
+  }
+  if (parts[0] === 'leases' && parts[1] && parts[1] !== 'upload-url') {
+    pathParameters.id = parts[1];
+  }
+
+  return {
+    body,
+    headers: (req.headers as Record<string, string>) || {},
+    httpMethod: req.method || 'GET',
+    path: url.pathname,
+    queryStringParameters: Object.keys(query).length ? query : null,
+    pathParameters: Object.keys(pathParameters).length ? pathParameters : null,
+    resource: url.pathname,
+    isBase64Encoded: false,
+    multiValueHeaders: {},
+    multiValueQueryStringParameters: null,
+    stageVariables: null,
+    requestContext: {
+      accountId: 'local',
+      apiId: 'local',
+      protocol: 'HTTP/1.1',
+      httpMethod: req.method || 'GET',
+      path: url.pathname,
+      stage: 'local',
+      requestId: 'local',
+      requestTimeEpoch: Date.now(),
+      resourceId: 'local',
+      resourcePath: url.pathname,
+      identity: {
+        accessKey: null,
+        accountId: null,
+        apiKey: null,
+        apiKeyId: null,
+        caller: null,
+        clientCert: null,
+        cognitoAuthenticationProvider: null,
+        cognitoAuthenticationType: null,
+        cognitoIdentityId: null,
+        cognitoIdentityPoolId: null,
+        principalOrgId: null,
+        sourceIp: '127.0.0.1',
+        user: null,
+        userAgent: 'rentvision-local',
+        userArn: null,
+      },
+      authorizer: undefined,
+    },
+  } as unknown as APIGatewayProxyEvent;
+}
+
+function routeHandler(pathname: string) {
+  if (pathname.includes('/listings')) {
+    return listingsHandler;
+  }
+  if (pathname.includes('/media')) {
+    return mediaHandler;
+  }
+  if (pathname.includes('/leases')) {
+    return leasesHandler;
+  }
+  return undefined;
+}
+
+const server = createServer(async (req, res) => {
+  setCors(res);
+
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 204;
+    res.end();
+    return;
+  }
+
+  const url = new URL(req.url || '/', `http://127.0.0.1:${PORT}`);
+
+  try {
+    if (req.method === 'PUT' && url.pathname.startsWith('/local-upload/')) {
+      const rest = url.pathname.replace('/local-upload/', '');
+      const slash = rest.indexOf('/');
+      const fileKey = decodeURIComponent(rest.slice(slash + 1));
+      const body = await readBody(req);
+      putLocalObject(fileKey, req.headers['content-type'] || 'application/octet-stream', body);
+      res.statusCode = 200;
+      res.end();
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname.startsWith('/local-objects/')) {
+      const fileKey = decodeURIComponent(url.pathname.replace('/local-objects/', ''));
+      const object = getLocalObject(fileKey);
+      if (!object) {
+        res.statusCode = 404;
+        res.end('Not found');
+        return;
+      }
+      res.statusCode = 200;
+      res.setHeader('Content-Type', object.contentType);
+      res.end(object.body);
+      return;
+    }
+
+    const handler = routeHandler(url.pathname);
+    if (!handler) {
+      res.statusCode = 404;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ success: false, error: { code: 'NOT_FOUND', message: 'Unknown route' } }));
+      return;
+    }
+
+    const rawBody = await readBody(req);
+    const event = toEvent(req, url, rawBody.length ? rawBody.toString('utf8') : null);
+    const result = await handler(event);
+
+    res.statusCode = result.statusCode;
+    for (const [key, value] of Object.entries(result.headers || {})) {
+      res.setHeader(key, String(value));
+    }
+    res.end(result.body);
+  } catch (error) {
+    console.error(error);
+    res.statusCode = 500;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(
+      JSON.stringify({
+        success: false,
+        error: { code: 'INTERNAL_ERROR', message: 'Local API failed' },
+      })
+    );
+  }
+});
+
+server.listen(PORT, () => {
+  console.log(`RentVision local API listening on http://localhost:${PORT}`);
+});
