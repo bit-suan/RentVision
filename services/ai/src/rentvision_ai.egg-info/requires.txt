@@ -1,0 +1,8 @@
+pydantic<3.0.0,>=2.7.0
+PyMuPDF<2.0.0,>=1.24.0
+
+[dev]
+pytest<9.0.0,>=8.0.0
+pytest-asyncio<1.0.0,>=0.23.0
+mypy<2.0.0,>=1.10.0
+hypothesis>=6.100.0

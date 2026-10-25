@@ -18,11 +18,19 @@ dev = [
     "pytest>=8.0.0,<9.0.0",
     "pytest-asyncio>=0.23.0,<1.0.0",
     "mypy>=1.10.0,<2.0.0",
+    "hypothesis>=6.100.0",
 ]
+
+[project.scripts]
+rentvision-ai = "rentvision_ai.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+pythonpath = ["src"]
 
 [tool.mypy]
 python_version = "3.12"

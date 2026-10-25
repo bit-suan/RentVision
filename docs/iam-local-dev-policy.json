@@ -1,0 +1,54 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DynamoDBAccess",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:Query",
+        "dynamodb:Scan",
+        "dynamodb:BatchGetItem",
+        "dynamodb:BatchWriteItem"
+      ],
+      "Resource": [
+        "arn:aws:dynamodb:eu-west-1:<ACCOUNT_ID>:table/rentvision-properties-dev",
+        "arn:aws:dynamodb:eu-west-1:<ACCOUNT_ID>:table/rentvision-properties-dev/index/*",
+        "arn:aws:dynamodb:eu-west-1:<ACCOUNT_ID>:table/rentvision-users-dev",
+        "arn:aws:dynamodb:eu-west-1:<ACCOUNT_ID>:table/rentvision-users-dev/index/*",
+        "arn:aws:dynamodb:eu-west-1:<ACCOUNT_ID>:table/rentvision-leases-dev",
+        "arn:aws:dynamodb:eu-west-1:<ACCOUNT_ID>:table/rentvision-leases-dev/index/*"
+      ]
+    },
+    {
+      "Sid": "S3MediaAccess",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::rentvision-property-media-<ACCOUNT_ID>-eu-west-1",
+        "arn:aws:s3:::rentvision-property-media-<ACCOUNT_ID>-eu-west-1/*"
+      ]
+    },
+    {
+      "Sid": "S3LeaseDocsAccess",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::rentvision-lease-documents-<ACCOUNT_ID>-eu-west-1",
+        "arn:aws:s3:::rentvision-lease-documents-<ACCOUNT_ID>-eu-west-1/*"
+      ]
+    }
+  ]
+}

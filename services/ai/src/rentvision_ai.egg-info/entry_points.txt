@@ -1,0 +1,2 @@
+[console_scripts]
+rentvision-ai = rentvision_ai.server:main

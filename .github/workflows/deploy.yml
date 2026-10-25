@@ -1,0 +1,100 @@
+name: RentVision Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target deployment environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+
+# ==============================================================================
+# GitHub Repository Secrets & Variables Configuration
+# ==============================================================================
+# Before running this workflow, configure the following in GitHub:
+#
+# Repository Secrets (Settings > Secrets and variables > Actions > Secrets):
+#   - AWS_DEPLOY_ROLE_ARN: The ARN of the IAM role configured with GitHub OIDC
+#     trust policy (e.g. arn:aws:iam::123456789012:role/RentVisionGitHubDeployRole).
+#
+# Repository Variables (Settings > Secrets and variables > Actions > Variables):
+#   - AWS_ACCOUNT_ID: The 12-digit AWS account ID (e.g. 123456789012).
+#   - AWS_REGION: The target deployment AWS region (defaults to eu-west-1).
+# ==============================================================================
+
+permissions:
+  id-token: write # Required for requesting OIDC JSON Web Token (JWT) from GitHub
+  contents: read  # Required for repository checkout (actions/checkout)
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    defaults:
+      run:
+        working-directory: infra
+
+    steps:
+      - name: Validate Production Branch Safeguard
+        if: ${{ inputs.environment == 'production' && github.ref != 'refs/heads/main' }}
+        run: |
+          echo "::error::Production deployments are strictly restricted to the 'main' branch! Current ref is '${{ github.ref }}'."
+          exit 1
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: infra/package-lock.json
+
+      - name: Install Infrastructure Dependencies
+        run: npm ci
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'eu-west-1' }}
+          role-session-name: GitHubActions-RentVisionDeploy-${{ inputs.environment }}
+
+      - name: CDK Diff
+        run: |
+          echo "Comparing infrastructure diff for environment: ${{ inputs.environment }}"
+          npx cdk diff
+        env:
+          CDK_DEFAULT_ACCOUNT: ${{ vars.AWS_ACCOUNT_ID }}
+          CDK_DEFAULT_REGION: ${{ vars.AWS_REGION || 'eu-west-1' }}
+          DEPLOY_ENV: ${{ inputs.environment }}
+
+      - name: CDK Deploy
+        run: |
+          echo "Deploying RentVision CDK stack for environment: ${{ inputs.environment }}"
+          npx cdk deploy --require-approval never --outputs-file ./cdk-outputs.json
+        env:
+          CDK_DEFAULT_ACCOUNT: ${{ vars.AWS_ACCOUNT_ID }}
+          CDK_DEFAULT_REGION: ${{ vars.AWS_REGION || 'eu-west-1' }}
+          DEPLOY_ENV: ${{ inputs.environment }}
+
+      - name: Capture and Display CDK Outputs
+        if: always()
+        run: |
+          if [ -f ./cdk-outputs.json ]; then
+            echo "### CDK Deployment Outputs (${{ inputs.environment }})" >> $GITHUB_STEP_SUMMARY
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            cat ./cdk-outputs.json >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "=== CDK Outputs ==="
+            cat ./cdk-outputs.json
+          else
+            echo "No cdk-outputs.json was generated."
+          fi

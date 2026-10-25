@@ -1,0 +1,99 @@
+Metadata-Version: 2.4
+Name: rentvision-ai
+Version: 0.1.0
+Summary: AI service for RentVision: property listing assistance and lease document extraction
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: pydantic<3.0.0,>=2.7.0
+Requires-Dist: PyMuPDF<2.0.0,>=1.24.0
+Provides-Extra: dev
+Requires-Dist: pytest<9.0.0,>=8.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio<1.0.0,>=0.23.0; extra == "dev"
+Requires-Dist: mypy<2.0.0,>=1.10.0; extra == "dev"
+Requires-Dist: hypothesis>=6.100.0; extra == "dev"
+
+# RentVision AI Service (`services/ai`)
+
+This service houses the Python-based AI and document processing capabilities for the RentVision platform.
+
+## Planned Capabilities
+
+- **Data Validation & Parsing**: Strongly-typed schema validation using [Pydantic v2](https://docs.pydantic.dev/) for incoming listing payloads and extraction targets.
+- **Lease Document Text Extraction**: High-fidelity PDF layout and text parsing via [PyMuPDF](https://pymupdf.readthedocs.io/) for rental agreements and lease contracts.
+- **AI-Powered Assistance**: Planned workflows for automated listing enhancement and lease question answering.
+
+> **Status Notice**: In this initialization phase, only environment configuration, dependency definitions, and package structure are established. Machine learning models, inference endpoints, and external AI API integrations are not yet implemented.
+
+## Directory Structure
+
+```text
+services/ai/
+├── src/
+│   └── rentvision_ai/
+│       └── __init__.py
+├── pyproject.toml
+├── requirements.txt
+└── README.md
+```
+
+## Local Environment Setup (Windows PowerShell)
+
+### Prerequisites
+
+- Python 3.12 or higher (verified with Python 3.12.13)
+- PowerShell (Windows 10/11)
+
+### 1. Create a Python Virtual Environment
+
+From the repository root or inside `services/ai`:
+
+```powershell
+# Navigate to the AI service directory
+cd services/ai
+
+# Create virtual environment named .venv
+python3.12 -m venv .venv
+```
+
+*(If `python3.12` is mapped as `python` on your system, use `python -m venv .venv`)*
+
+### 2. Activate the Virtual Environment
+
+```powershell
+# Set execution policy if not already permitted for the current session
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+
+# Activate the environment
+.\.venv\Scripts\Activate.ps1
+```
+
+When activated, `(.venv)` will appear in your shell prompt.
+
+### 3. Install Dependencies
+
+```powershell
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+To install editable package in development mode:
+
+```powershell
+pip install -e ".[dev]"
+```
+
+### 4. Verify Configuration
+
+Run basic verification to confirm Pydantic and PyMuPDF import without issue once dependencies are installed:
+
+```powershell
+python -c "import pydantic, fitz; print(f'Pydantic: {pydantic.__version__}, PyMuPDF: {fitz.__version__}')"
+```
+
+### 5. Deactivate Environment
+
+When done working in this service:
+
+```powershell
+deactivate
+```
