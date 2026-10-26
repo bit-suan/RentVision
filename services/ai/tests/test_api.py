@@ -378,6 +378,77 @@ class TestLeaseQAEndpoint:
         assert res.status_code == 400
         assert "exceeds maximum allowed file size of 20 MB" in res.json()["detail"]
 
+    def test_locale_negotiation_via_payload_takes_highest_precedence(
+        self,
+        test_client: TestClient,
+        sample_pdf_base64: str,
+    ) -> None:
+        mock_output = json.dumps({
+            "answer": "Monthly rent is 50,000 ETB.",
+            "status": "supported",
+            "citations": [{"page_number": 1, "excerpt": "Rent: 50,000 ETB"}],
+        })
+        mock_service = LeaseQAService(client=MockLLMClient(default_response=mock_output))
+        app.dependency_overrides[get_lease_qa_service] = lambda: mock_service
+        try:
+            res = test_client.post(
+                "/api/v1/lease-qa",
+                json={"question": "What is the rent?", "pdf_base64": sample_pdf_base64, "locale": "am"},
+                headers={"Accept-Language": "en-US,en;q=0.9"},
+            )
+            assert res.status_code == 200
+            assert res.headers["content-language"] == "am"
+            assert res.json()["response_language"] == "am"
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_locale_negotiation_via_accept_language_header(
+        self,
+        test_client: TestClient,
+        sample_pdf_base64: str,
+    ) -> None:
+        mock_output = json.dumps({
+            "answer": "Monthly rent is 50,000 ETB.",
+            "status": "supported",
+            "citations": [{"page_number": 1, "excerpt": "Rent: 50,000 ETB"}],
+        })
+        mock_service = LeaseQAService(client=MockLLMClient(default_response=mock_output))
+        app.dependency_overrides[get_lease_qa_service] = lambda: mock_service
+        try:
+            res = test_client.post(
+                "/api/v1/lease-qa",
+                json={"question": "What is the rent?", "pdf_base64": sample_pdf_base64},
+                headers={"Accept-Language": "am,en;q=0.8"},
+            )
+            assert res.status_code == 200
+            assert res.headers["content-language"] == "am"
+            assert res.json()["response_language"] == "am"
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_locale_defaults_to_english_fallback(
+        self,
+        test_client: TestClient,
+        sample_pdf_base64: str,
+    ) -> None:
+        mock_output = json.dumps({
+            "answer": "Monthly rent is 50,000 ETB.",
+            "status": "supported",
+            "citations": [{"page_number": 1, "excerpt": "Rent: 50,000 ETB"}],
+        })
+        mock_service = LeaseQAService(client=MockLLMClient(default_response=mock_output))
+        app.dependency_overrides[get_lease_qa_service] = lambda: mock_service
+        try:
+            res = test_client.post(
+                "/api/v1/lease-qa",
+                json={"question": "What is the rent?", "pdf_base64": sample_pdf_base64},
+            )
+            assert res.status_code == 200
+            assert res.headers["content-language"] == "en"
+            assert res.json()["response_language"] == "en"
+        finally:
+            app.dependency_overrides.clear()
+
 
 class TestMockModeEnvironment:
     """Mock mode environment tests."""

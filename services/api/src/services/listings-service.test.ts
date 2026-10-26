@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "@jest/globals";
 import type { Listing } from "../../../../shared/contracts/listings";
 import { InMemoryListingsRepository } from "../repositories/in-memory-listings-repository";
 import { ApiError } from "../utils/errors";

@@ -12,7 +12,7 @@ function listing(
   return {
     ...partial,
     currency: partial.currency ?? 'ETB',
-    status: ListingStatus.ACTIVE,
+    status: ListingStatus.APPROVED,
     geohash: encodeGeohash(partial.latitude, partial.longitude, 5),
     createdAt: now,
     updatedAt: now,

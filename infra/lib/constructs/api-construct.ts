@@ -74,8 +74,9 @@ export class RentVisionApi extends Construct {
   constructor(scope: Construct, id: string, props: RentVisionApiProps) {
     super(scope, id);
 
-    // Path to the Lambda handler source code
-    const handlersPath = path.join(__dirname, '..', '..', '..', 'services', 'api', 'src', 'handlers');
+    // Path to the Lambda handler source code and API package root
+    const apiPath = path.join(__dirname, '..', '..', '..', 'services', 'api');
+    const handlersPath = path.join(apiPath, 'src', 'handlers');
 
     // Common Lambda configuration
     const lambdaDefaults: Partial<lambdaNodejs.NodejsFunctionProps> = {
@@ -84,6 +85,8 @@ export class RentVisionApi extends Construct {
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
       tracing: lambda.Tracing.ACTIVE,
+      projectRoot: apiPath,
+      depsLockFilePath: path.join(apiPath, 'package-lock.json'),
       bundling: {
         minify: true,
         sourceMap: true,
@@ -192,6 +195,14 @@ export class RentVisionApi extends Construct {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
+    this.healthHandler = new lambdaNodejs.NodejsFunction(this, 'HealthHandler', {
+      ...lambdaDefaults,
+      functionName: `rentvision-health-${props.environment}`,
+      description: 'Returns API health status',
+      entry: path.join(handlersPath, 'health.ts'),
+      handler: 'handler',
+    });
+
     // -------------------------------------------------------------------------
     // HTTP API Gateway
     // -------------------------------------------------------------------------
@@ -262,6 +273,17 @@ export class RentVisionApi extends Construct {
       integration: listingsIntegration,
     });
 
+    const healthIntegration = new apigatewayv2Integrations.HttpLambdaIntegration(
+      'HealthIntegration',
+      this.healthHandler,
+    );
+
+    this.httpApi.addRoutes({
+      path: '/health',
+      methods: [apigatewayv2.HttpMethod.GET],
+      integration: healthIntegration,
+    });
+
     this.httpApi.addRoutes({
       path: '/listings',
       methods: [apigatewayv2.HttpMethod.POST],
@@ -299,6 +321,18 @@ export class RentVisionApi extends Construct {
     this.httpApi.addRoutes({
       path: '/listings/search',
       methods: [apigatewayv2.HttpMethod.GET],
+      integration: listingsIntegration,
+    });
+
+    this.httpApi.addRoutes({
+      path: '/listings/{id}/status',
+      methods: [apigatewayv2.HttpMethod.PATCH],
+      integration: listingsIntegration,
+    });
+
+    this.httpApi.addRoutes({
+      path: '/listings/{id}/images',
+      methods: [apigatewayv2.HttpMethod.POST],
       integration: listingsIntegration,
     });
 

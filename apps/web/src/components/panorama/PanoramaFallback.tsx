@@ -1,13 +1,16 @@
+import { useTranslations } from "next-intl";
+
 interface PanoramaFallbackProps {
   message?: string;
 }
 
-export default function PanoramaFallback({
-  message = "A 360-degree view is not available for this property yet. The property photo gallery is still available above.",
-}: PanoramaFallbackProps) {
+export default function PanoramaFallback({ message }: PanoramaFallbackProps) {
+  const t = useTranslations("Panorama");
+  const displayMessage = message ?? t("unavailable");
+
   return (
     <div className="tour-placeholder" role="status">
-      <p>{message}</p>
+      <p>{displayMessage}</p>
     </div>
   );
 }
