@@ -1,26 +1,14 @@
 import { redirect } from "next/navigation";
 
-import Link from "next/link";
-import { FormEvent, useState } from "react";
-import { useParams } from "next/navigation";
-import { askLeaseQuestion } from "@/lib/api";
-import type { LeaseQAResponse } from "@/lib/types";
-import ProtectedRoute from "@/components/layout/ProtectedRoute";
+export const instant = false;
 
-export default function LeasePage() {
-  return (
-    <ProtectedRoute>
-      <LeaseContent />
-    </ProtectedRoute>
-  );
-}
-
-function LeaseContent() {
-  const params = useParams<{ id: string }>();
-  const [question, setQuestion] = useState("What is the monthly rent and when is it due?");
-  const [answer, setAnswer] = useState<LeaseQAResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+const DEMO_IDS = [
+  "listing-bole-loft",
+  "listing-kazanchis-studio",
+  "listing-sarbet-villa",
+  "listing-old-airport-family",
+  "listing-cmc-condo",
+];
 
 export function generateStaticParams() {
   return DEMO_IDS.map((id) => ({ id }));

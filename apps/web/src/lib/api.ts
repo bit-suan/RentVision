@@ -6,7 +6,7 @@ const API_BASE = (
 ).replace(/\/$/, "");
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  let headers: Record<string, string> = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(init?.headers as Record<string, string> || {}),
   };
@@ -17,7 +17,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
-  } catch (error) {
+  } catch {
     // Not signed in, proceed without token
   }
 

@@ -23,8 +23,8 @@ export default function ForgotPasswordPage() {
     try {
       await requestPasswordReset({ username: email });
       router.push(`/reset-password?email=${encodeURIComponent(email)}`);
-    } catch (err: any) {
-      setError(err.message || "Failed to request password reset.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to request password reset.");
     } finally {
       setIsLoading(false);
     }

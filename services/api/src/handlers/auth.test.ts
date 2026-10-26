@@ -63,7 +63,7 @@ describe('Authorization and JWT Claim parsing', () => {
       listingId,
       landlordId: 'owner-456',
       title: 'Original Title',
-      status: ListingStatus.ACTIVE,
+      status: ListingStatus.APPROVED,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     } as any);
@@ -86,7 +86,7 @@ describe('Authorization and JWT Claim parsing', () => {
     await putListing({
       listingId,
       landlordId: 'owner-456',
-      status: ListingStatus.ACTIVE,
+      status: ListingStatus.APPROVED,
     } as any);
 
     const event = createJwtEvent(

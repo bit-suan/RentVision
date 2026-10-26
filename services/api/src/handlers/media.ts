@@ -99,11 +99,11 @@ async function handleGenerateUploadUrl(
   }
 
   const { listingId, fileName, mediaType, contentType } = body;
-  const listing = await getListing(listingId);
 
   if (!listingId || typeof listingId !== 'string') {
     return errorResponse('VALIDATION_ERROR', 'listingId is required', 400);
   }
+
 
   // Authorization check: User must own the listing to upload media to it
   const listing = await getListing(listingId);

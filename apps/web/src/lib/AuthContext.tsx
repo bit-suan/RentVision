@@ -7,7 +7,6 @@ import {
   confirmSignUp as amplifyConfirmSignUp,
   signOut as amplifySignOut,
   getCurrentUser,
-  fetchAuthSession,
   resendSignUpCode as amplifyResendSignUpCode,
   resetPassword as amplifyResetPassword,
   confirmResetPassword as amplifyConfirmResetPassword,
@@ -46,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const currentUser = await getCurrentUser();
       setUser(currentUser);
-    } catch (error) {
+    } catch {
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -54,8 +53,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    checkUser();
-  }, [checkUser]);
+    let isSubscribed = true;
+    getCurrentUser()
+      .then((currentUser) => {
+        if (isSubscribed) {
+          setUser(currentUser);
+        }
+      })
+      .catch(() => {
+        if (isSubscribed) {
+          setUser(null);
+        }
+      })
+      .finally(() => {
+        if (isSubscribed) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, []);
 
   const signIn = async (input: SignInInput) => {
     await amplifySignIn(input);

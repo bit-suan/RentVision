@@ -26,8 +26,8 @@ function VerifyContent() {
     try {
       await confirmSignUp({ username: email, confirmationCode: code });
       router.push("/login?verified=true");
-    } catch (err: any) {
-      setError(err.message || "Invalid verification code.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Invalid verification code.");
     } finally {
       setIsLoading(false);
     }
@@ -41,8 +41,8 @@ function VerifyContent() {
     try {
       await resendSignUpCode(email);
       setSuccess("Verification code resent successfully.");
-    } catch (err: any) {
-      setError(err.message || "Failed to resend code.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to resend code.");
     } finally {
       setIsResending(false);
     }
@@ -52,7 +52,7 @@ function VerifyContent() {
     <main className="page auth-page">
       <div className="auth-card">
         <h1>Verify Your Email</h1>
-        <p className="muted">We've sent a code to {email}</p>
+        <p className="muted">We&apos;ve sent a code to {email}</p>
 
         <form onSubmit={handleSubmit} className="auth-form">
           {error && <p className="error">{error}</p>}
