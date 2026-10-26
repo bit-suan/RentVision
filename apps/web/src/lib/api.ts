@@ -1,4 +1,10 @@
-import type { ApiResponse, LeaseQAResponse, Listing } from "./types";
+import type {
+  ApiResponse,
+  LeaseQAResponse,
+  Listing,
+  ListingSearchQuery,
+  ListingSearchResponse,
+} from "./types";
 import { fetchAuthSession } from "aws-amplify/auth";
 
 const API_BASE = (
@@ -6,7 +12,7 @@ const API_BASE = (
 ).replace(/\/$/, "");
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  let headers: Record<string, string> = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(init?.headers as Record<string, string> || {}),
   };
@@ -17,7 +23,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
-  } catch (error) {
+  } catch {
     // Not signed in, proceed without token
   }
 
@@ -47,28 +53,32 @@ export function getListing(id: string): Promise<Listing> {
   return request(`/listings/${id}`);
 }
 
-export function searchListings(params: {
-  lat: number;
-  lng: number;
-  radiusKm: number;
-  propertyType?: string;
-}): Promise<{ items: Listing[]; count: number }> {
-  const query = new URLSearchParams({
-    lat: String(params.lat),
-    lng: String(params.lng),
-    radiusKm: String(params.radiusKm),
-  });
-  if (params.propertyType) {
-    query.set("propertyType", params.propertyType);
-  }
+export function searchListings(
+  params: ListingSearchQuery
+): Promise<ListingSearchResponse> {
+  const query = new URLSearchParams();
+  if (params.lat !== undefined) query.set("lat", String(params.lat));
+  if (params.lng !== undefined) query.set("lng", String(params.lng));
+  if (params.radiusKm !== undefined) query.set("radiusKm", String(params.radiusKm));
+  if (params.minPrice !== undefined) query.set("minPrice", String(params.minPrice));
+  if (params.maxPrice !== undefined) query.set("maxPrice", String(params.maxPrice));
+  if (params.bedrooms !== undefined) query.set("bedrooms", String(params.bedrooms));
+  if (params.propertyType) query.set("propertyType", params.propertyType);
+  if (params.limit !== undefined) query.set("limit", String(params.limit));
+  if (params.offset !== undefined) query.set("offset", String(params.offset));
+
   return request(`/listings/search?${query.toString()}`);
+}
+
+export function getDownloadUrl(fileKey: string): Promise<{ downloadUrl: string; expiresIn: number }> {
+  return request(`/media/download-url?fileKey=${encodeURIComponent(fileKey)}`);
 }
 
 export function askLeaseQuestion(
   listingId: string,
   question: string
 ): Promise<LeaseQAResponse> {
-  return request(`/leases/lease-${listingId}/qa`, {
+  return request(`/leases/${listingId}/qa`, {
     method: "POST",
     body: JSON.stringify({ question }),
   });

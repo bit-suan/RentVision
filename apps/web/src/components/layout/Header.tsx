@@ -1,4 +1,5 @@
 import Link from "next/link";
+import UserMenu from "./UserMenu";
 
 export default function Header() {
   return (
@@ -14,8 +15,7 @@ export default function Header() {
         <nav aria-label="Main navigation" className="site-nav">
           <Link href="/">Home</Link>
           <Link href="/properties">Properties</Link>
-          <Link href="/map">Map</Link>
-          <Link href="/login">Login</Link>
+          <UserMenu />
         </nav>
       </div>
     </header>

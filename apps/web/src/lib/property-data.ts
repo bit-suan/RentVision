@@ -1,14 +1,32 @@
 import type {
-  GeoCoordinates,
-  ListingAvailability,
-  PanoramaConfig,
+  ListingStatus,
+  Listing,
 } from "../../../../shared/contracts";
 
-export type {
-  GeoCoordinates as PropertyCoordinates,
-  ListingAvailability as PropertyAvailability,
-  PanoramaConfig as PropertyPanoramaConfig,
-} from "../../../../shared/contracts";
+export type PropertyAvailability = "AVAILABLE" | "COMING_SOON" | "RENTED" | "OCCUPIED";
+
+export interface PropertyCoordinates {
+  lat: number;
+  lng: number;
+}
+
+export interface PropertyPanoramaConfig {
+  deliveryUrl: string;
+  title?: string;
+  initialView?: {
+    yaw?: number;
+    pitch?: number;
+    hfov?: number;
+  };
+  hotspots?: Array<{
+    id: string;
+    pitch: number;
+    yaw: number;
+    text: string;
+    type: "SCENE" | "INFO";
+    targetPanoramaId?: string;
+  }>;
+}
 
 export interface MockProperty {
   id: string;
@@ -18,9 +36,9 @@ export interface MockProperty {
   bedrooms: number;
   bathrooms: number;
   propertyType: string;
-  availability: ListingAvailability;
-  coordinates?: GeoCoordinates;
-  panorama?: PanoramaConfig;
+  availability: PropertyAvailability;
+  coordinates?: PropertyCoordinates;
+  panorama?: PropertyPanoramaConfig;
   imageUrl: string;
   galleryImages: string[];
   description: string;

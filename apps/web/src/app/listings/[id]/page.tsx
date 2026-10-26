@@ -1,17 +1,18 @@
 "use client";
 
-import Link from "next/link";
+import { Suspense, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import Link from "next/link";
 import { getListing } from "@/lib/api";
 import type { Listing } from "@/lib/types";
 
-export default function ListingDetailPage() {
+function ListingDetailContent() {
   const params = useParams<{ id: string }>();
   const [listing, setListing] = useState<Listing | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!params.id) return;
     getListing(params.id)
       .then(setListing)
       .catch((err: unknown) => {
@@ -70,5 +71,13 @@ export default function ListingDetailPage() {
         </div>
       </article>
     </main>
+  );
+}
+
+export default function ListingDetailPage() {
+  return (
+    <Suspense fallback={<main className="page"><p className="muted">Loading listing...</p></main>}>
+      <ListingDetailContent />
+    </Suspense>
   );
 }

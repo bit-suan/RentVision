@@ -26,8 +26,11 @@ export default function RootLayout({
                 <span>Addis Ababa rentals, mapped and inspectable</span>
               </Link>
               <div className="header-actions">
-                <Link className="button secondary" href="/">
-                  Map search
+                <Link className="button secondary" href="/properties">
+                  Discover
+                </Link>
+                <Link className="button quiet" href="/">
+                  Map
                 </Link>
                 <UserMenu />
               </div>

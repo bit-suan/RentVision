@@ -36,6 +36,23 @@ export interface Listing {
   distanceKm?: number;
 }
 
+export interface ListingSearchQuery {
+  lat?: number;
+  lng?: number;
+  radiusKm?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  bedrooms?: number;
+  propertyType?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface ListingSearchResponse {
+  items: Listing[];
+  count: number;
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;

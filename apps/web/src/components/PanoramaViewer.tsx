@@ -24,7 +24,9 @@ export function PanoramaViewer({
     let cancelled = false;
 
     const start = async () => {
+      // @ts-ignore
       await import("pannellum/src/js/libpannellum.js");
+      // @ts-ignore
       await import("pannellum");
       if (cancelled || !containerRef.current) {
         return;
