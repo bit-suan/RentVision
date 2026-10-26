@@ -1,4 +1,4 @@
-import type { PropertyAvailability } from "@/lib/property-data";
+
 
 /**
  * Formats a price with currency and locale-specific labels.

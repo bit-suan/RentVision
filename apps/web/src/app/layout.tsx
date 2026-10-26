@@ -1,8 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { AuthProvider } from "@/lib/AuthContext";
-import UserMenu from "@/components/layout/UserMenu";
-import "./globals.css";
 
 export const metadata: Metadata = {
   title: "RentVision",
@@ -18,26 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AuthProvider>
-          <div className="app-shell">
-            <header className="topbar">
-              <Link href="/" className="brand">
-                <strong>RentVision</strong>
-                <span>Addis Ababa rentals, mapped and inspectable</span>
-              </Link>
-              <div className="header-actions">
-                <Link className="button secondary" href="/properties">
-                  Discover
-                </Link>
-                <Link className="button quiet" href="/">
-                  Map
-                </Link>
-                <UserMenu />
-              </div>
-            </header>
-            {children}
-          </div>
-        </AuthProvider>
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

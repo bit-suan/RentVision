@@ -1,7 +1,4 @@
-import type {
-  ListingStatus,
-  Listing,
-} from "../../../../shared/contracts";
+import type {} from "../../../../shared/contracts";
 
 export type PropertyAvailability = "AVAILABLE" | "COMING_SOON" | "RENTED" | "OCCUPIED";
 
