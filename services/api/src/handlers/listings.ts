@@ -3,6 +3,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { encodeGeohash, getBoundingBoxGeohashes } from '../utils/geohash';
 import { haversineDistance } from '../utils/distance';
 import { errorResponse, successResponse, createResponse } from '../utils/response';
+import { getActor } from '../utils/request-actor';
+import { canModifyListing, requireUser } from '../utils/auth';
 import {
   CreateListingRequest,
   Listing,
@@ -69,6 +71,18 @@ export const handler = async (
       return await handleGetListing(listingId);
     }
 
+    if (method === 'PUT' && pathParamId) {
+      return await handleUpdateListing(pathParamId, event);
+    }
+
+    if (method === 'PATCH' && pathParamId && segments.includes('status')) {
+      return await handleUpdateStatus(pathParamId, event);
+    }
+
+    if (method === 'POST' && pathParamId && segments.includes('images')) {
+      return await handleAddImage(pathParamId, event);
+    }
+
     if (method === 'GET' && segments.length === 1 && segments[0] === 'listings') {
       return await handleListListings(event);
     }
@@ -82,7 +96,13 @@ export const handler = async (
       `Resource not found for ${method} /${segments.join('/')}`,
       404
     );
-  } catch (err: unknown) {
+  } catch (err: any) {
+    if (err.code === 'UNAUTHENTICATED') {
+      return errorResponse('UNAUTHENTICATED', err.message, 401);
+    }
+    if (err.code === 'UNAUTHORIZED') {
+      return errorResponse('UNAUTHORIZED', err.message, 403);
+    }
     const message = err instanceof Error ? err.message : 'Internal server error';
     console.error('Unhandled error in listings handler:', err);
     return errorResponse('INTERNAL_ERROR', message, 500);
@@ -104,6 +124,110 @@ async function handleGetListing(listingId: string): Promise<APIGatewayProxyResul
   }
 
   return successResponse(item);
+}
+
+async function handleUpdateListing(
+  listingId: string,
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> {
+  const actor = getActor(event);
+  requireUser(actor);
+
+  const existing = await getListing(listingId);
+  if (!existing) {
+    return errorResponse('NOT_FOUND', 'Listing not found', 404);
+  }
+
+  if (!canModifyListing(existing.landlordId, actor)) {
+    return errorResponse('UNAUTHORIZED', 'Not authorized to update this listing', 403);
+  }
+
+  if (!event.body) {
+    return errorResponse('VALIDATION_ERROR', 'Request body is required', 400);
+  }
+
+  const updates = JSON.parse(event.body);
+  const updatedListing: Listing = {
+    ...existing,
+    ...updates,
+    listingId, // Ensure ID cannot be changed
+    updatedAt: new Date().toISOString(),
+  };
+
+  await putListing(updatedListing);
+  return successResponse(updatedListing);
+}
+
+async function handleUpdateStatus(
+  listingId: string,
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> {
+  const actor = getActor(event);
+  requireUser(actor);
+
+  const existing = await getListing(listingId);
+  if (!existing) {
+    return errorResponse('NOT_FOUND', 'Listing not found', 404);
+  }
+
+  if (!canModifyListing(existing.landlordId, actor)) {
+    return errorResponse('UNAUTHORIZED', 'Not authorized to update status', 403);
+  }
+
+  if (!event.body) {
+    return errorResponse('VALIDATION_ERROR', 'Request body is required', 400);
+  }
+
+  const { status } = JSON.parse(event.body);
+  if (!status || !Object.values(ListingStatus).includes(status)) {
+    return errorResponse('VALIDATION_ERROR', 'Invalid status', 400);
+  }
+
+  const updatedListing: Listing = {
+    ...existing,
+    status,
+    updatedAt: new Date().toISOString(),
+  };
+
+  await putListing(updatedListing);
+  return successResponse(updatedListing);
+}
+
+async function handleAddImage(
+  listingId: string,
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> {
+  const actor = getActor(event);
+  requireUser(actor);
+
+  const existing = await getListing(listingId);
+  if (!existing) {
+    return errorResponse('NOT_FOUND', 'Listing not found', 404);
+  }
+
+  if (!canModifyListing(existing.landlordId, actor)) {
+    return errorResponse('UNAUTHORIZED', 'Not authorized to add images', 403);
+  }
+
+  if (!event.body) {
+    return errorResponse('VALIDATION_ERROR', 'Request body is required', 400);
+  }
+
+  const { fileKey, type } = JSON.parse(event.body);
+  if (!fileKey) {
+    return errorResponse('VALIDATION_ERROR', 'fileKey is required', 400);
+  }
+
+  const updatedListing: Listing = { ...existing };
+  if (type === 'panorama') {
+    updatedListing.panoramaKeys = [...(existing.panoramaKeys || []), fileKey];
+  } else {
+    updatedListing.mediaKeys = [...(existing.mediaKeys || []), fileKey];
+  }
+  updatedListing.updatedAt = new Date().toISOString();
+
+  await putListing(updatedListing);
+  return successResponse(updatedListing);
 }
 
 async function handleListListings(
