@@ -1,0 +1,17 @@
+#!/usr/bin/env node
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+require("source-map-support/register");
+const cdk = require("aws-cdk-lib");
+const rentvision_stack_1 = require("../lib/rentvision-stack");
+const app = new cdk.App();
+const environment = process.env.DEPLOY_ENV || 'dev';
+new rentvision_stack_1.RentVisionStack(app, `RentVisionStack-${environment}`, {
+    env: {
+        account: process.env.CDK_DEFAULT_ACCOUNT || process.env.AWS_ACCOUNT_ID,
+        region: process.env.CDK_DEFAULT_REGION || process.env.AWS_REGION || 'eu-west-1',
+    },
+    environment,
+    description: 'RentVision core infrastructure stack: DynamoDB, S3, API Gateway, and Lambda integrations',
+});
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiaW5mcmEuanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyJpbmZyYS50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiOzs7QUFDQSx1Q0FBcUM7QUFDckMsbUNBQW1DO0FBQ25DLDhEQUEwRDtBQUUxRCxNQUFNLEdBQUcsR0FBRyxJQUFJLEdBQUcsQ0FBQyxHQUFHLEVBQUUsQ0FBQztBQUUxQixNQUFNLFdBQVcsR0FBRyxPQUFPLENBQUMsR0FBRyxDQUFDLFVBQVUsSUFBSSxLQUFLLENBQUM7QUFFcEQsSUFBSSxrQ0FBZSxDQUFDLEdBQUcsRUFBRSxtQkFBbUIsV0FBVyxFQUFFLEVBQUU7SUFDekQsR0FBRyxFQUFFO1FBQ0gsT0FBTyxFQUFFLE9BQU8sQ0FBQyxHQUFHLENBQUMsbUJBQW1CLElBQUksT0FBTyxDQUFDLEdBQUcsQ0FBQyxjQUFjO1FBQ3RFLE1BQU0sRUFBRSxPQUFPLENBQUMsR0FBRyxDQUFDLGtCQUFrQixJQUFJLE9BQU8sQ0FBQyxHQUFHLENBQUMsVUFBVSxJQUFJLFdBQVc7S0FDaEY7SUFDRCxXQUFXO0lBQ1gsV0FBVyxFQUFFLDBGQUEwRjtDQUN4RyxDQUFDLENBQUMiLCJzb3VyY2VzQ29udGVudCI6WyIjIS91c3IvYmluL2VudiBub2RlXHJcbmltcG9ydCAnc291cmNlLW1hcC1zdXBwb3J0L3JlZ2lzdGVyJztcclxuaW1wb3J0ICogYXMgY2RrIGZyb20gJ2F3cy1jZGstbGliJztcclxuaW1wb3J0IHsgUmVudFZpc2lvblN0YWNrIH0gZnJvbSAnLi4vbGliL3JlbnR2aXNpb24tc3RhY2snO1xyXG5cclxuY29uc3QgYXBwID0gbmV3IGNkay5BcHAoKTtcclxuXHJcbmNvbnN0IGVudmlyb25tZW50ID0gcHJvY2Vzcy5lbnYuREVQTE9ZX0VOViB8fCAnZGV2JztcclxuXHJcbm5ldyBSZW50VmlzaW9uU3RhY2soYXBwLCBgUmVudFZpc2lvblN0YWNrLSR7ZW52aXJvbm1lbnR9YCwge1xyXG4gIGVudjoge1xyXG4gICAgYWNjb3VudDogcHJvY2Vzcy5lbnYuQ0RLX0RFRkFVTFRfQUNDT1VOVCB8fCBwcm9jZXNzLmVudi5BV1NfQUNDT1VOVF9JRCxcclxuICAgIHJlZ2lvbjogcHJvY2Vzcy5lbnYuQ0RLX0RFRkFVTFRfUkVHSU9OIHx8IHByb2Nlc3MuZW52LkFXU19SRUdJT04gfHwgJ2V1LXdlc3QtMScsXHJcbiAgfSxcclxuICBlbnZpcm9ubWVudCxcclxuICBkZXNjcmlwdGlvbjogJ1JlbnRWaXNpb24gY29yZSBpbmZyYXN0cnVjdHVyZSBzdGFjazogRHluYW1vREIsIFMzLCBBUEkgR2F0ZXdheSwgYW5kIExhbWJkYSBpbnRlZ3JhdGlvbnMnLFxyXG59KTtcclxuIl19

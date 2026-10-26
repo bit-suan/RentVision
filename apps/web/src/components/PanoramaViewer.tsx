@@ -24,9 +24,9 @@ export function PanoramaViewer({
     let cancelled = false;
 
     const start = async () => {
-      // @ts-ignore
+      // @ts-expect-error pannellum script does not provide a module declaration
       await import("pannellum/src/js/libpannellum.js");
-      // @ts-ignore
+      // @ts-expect-error @types/pannellum defines ambient globals rather than a module
       await import("pannellum");
       if (cancelled || !containerRef.current) {
         return;

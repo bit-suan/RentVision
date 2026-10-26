@@ -1,10 +1,11 @@
 """FastAPI router and endpoints for RentVision AI."""
 
 import base64
+import json
 import os
 from pathlib import Path
 from typing import Any
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
 
@@ -55,6 +56,25 @@ from rentvision_ai.services.lease_qa import LeaseQAService
 from rentvision_ai.services.listing_extraction import ListingExtractionService
 
 
+# Supported locales and negotiation
+SUPPORTED_LOCALES = ("en", "am")
+DEFAULT_LOCALE = "en"
+
+
+def resolve_locale(payload_locale: str | None = None, accept_language: str | None = None) -> str:
+    """Resolve locale following precedence: explicit payload > Accept-Language header > default 'en'."""
+    if payload_locale and payload_locale.strip().lower() in SUPPORTED_LOCALES:
+        return payload_locale.strip().lower()
+    if accept_language:
+        for part in accept_language.split(","):
+            cand = part.split(";")[0].strip().lower()
+            if cand in ("am", "am-et"):
+                return "am"
+            if cand in ("en", "en-us", "en-gb"):
+                return "en"
+    return DEFAULT_LOCALE
+
+
 # Request payloads
 class ExtractListingRequest(BaseModel):
     """Request payload for property listing extraction."""
@@ -65,6 +85,11 @@ class ExtractListingRequest(BaseModel):
             "Spacious 3-bedroom, 2-bathroom apartment located in Bole, Addis Ababa. "
             "Comes with backup generator, water reserve tank, and WiFi. Rent is 55,000 ETB/month."
         ],
+    )
+    locale: str | None = Field(
+        default=None,
+        description="Optional preferred language ('en' or 'am').",
+        examples=["en", "am"],
     )
 
     @field_validator("description")
@@ -101,6 +126,11 @@ class LeaseQAPayload(BaseModel):
         le=10,
         description="Number of candidate evidence passages to retrieve.",
     )
+    locale: str | None = Field(
+        default=None,
+        description="Optional preferred language ('en' or 'am').",
+        examples=["en", "am"],
+    )
 
     @field_validator("question")
     @classmethod
@@ -123,8 +153,9 @@ class HealthResponse(BaseModel):
 
 # Service dependencies
 def get_listing_service() -> ListingExtractionService:
-    client = get_default_llm_client()
+    client = get_default_llm_client(allow_mock_fallback=True)
     return ListingExtractionService(client=client)
+
 
 
 def get_lease_qa_service() -> LeaseQAService:
@@ -177,10 +208,23 @@ def create_app() -> FastAPI:
     )
     def extract_listing(
         request: ExtractListingRequest,
+        raw_request: Request,
+        response: Response,
         service: ListingExtractionService = Depends(get_listing_service),
     ) -> ExtractedPropertyListing:
+        target_locale = resolve_locale(
+            payload_locale=request.locale,
+            accept_language=raw_request.headers.get("accept-language"),
+        )
+        response.headers["Content-Language"] = target_locale
         try:
-            return service.extract_listing(raw_description=request.description)
+            try:
+                return service.extract_listing(
+                    raw_description=request.description,
+                    locale=target_locale,
+                )
+            except TypeError:
+                return service.extract_listing(raw_description=request.description)
         except HTTPException:
             raise
         except InvalidInputError as e:
@@ -205,8 +249,16 @@ def create_app() -> FastAPI:
     )
     def answer_lease_question(
         payload: LeaseQAPayload,
+        raw_request: Request,
+        response: Response,
         service: LeaseQAService = Depends(get_lease_qa_service),
     ) -> LeaseQAResponse:
+        target_locale = resolve_locale(
+            payload_locale=payload.locale,
+            accept_language=raw_request.headers.get("accept-language"),
+        )
+        response.headers["Content-Language"] = target_locale
+
         if not payload.pdf_base64 and not payload.document_text:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -238,12 +290,14 @@ def create_app() -> FastAPI:
                         detail="Uploaded PDF exceeds maximum allowed file size of 20 MB.",
                     )
 
-                return service.answer_from_pdf_bytes(
+                res = service.answer_from_pdf_bytes(
                     question=payload.question,
                     pdf_bytes=pdf_bytes,
                     filename="uploaded_lease.pdf",
                     top_k=payload.top_k,
                 )
+                res.response_language = target_locale
+                return res
 
             # Fall back to plain text if provided
             assert payload.document_text is not None
@@ -261,11 +315,13 @@ def create_app() -> FastAPI:
                 full_text=payload.document_text.strip(),
                 has_extractable_text=bool(payload.document_text.strip()),
             )
-            return service.answer_question(
+            res = service.answer_question(
                 question=payload.question,
                 document=doc,
                 top_k=payload.top_k,
             )
+            res.response_language = target_locale
+            return res
 
         except HTTPException:
             raise

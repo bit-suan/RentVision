@@ -18,7 +18,7 @@ function makeEvent(
     path,
     queryStringParameters: query ?? null,
     body: body !== undefined ? JSON.stringify(body) : null,
-    headers: {},
+    headers: { 'x-user-id': 'property-test-landlord' },
     pathParameters: pathParams ?? null,
     resource: path,
     isBase64Encoded: false,
@@ -37,7 +37,6 @@ const propertyTypeArb = fc.constantFrom(
 // fc.float requires 32-bit float boundaries, so we use Math.fround.
 const latArb = fc.float({ min: Math.fround(8.8), max: Math.fround(9.2), noNaN: true });
 const lngArb = fc.float({ min: Math.fround(38.6), max: Math.fround(39.0), noNaN: true });
-const landlordIdArb = fc.string({ minLength: 1, maxLength: 40 });
 
 interface ValidListing {
   title: string;
@@ -46,7 +45,6 @@ interface ValidListing {
   propertyType: string;
   latitude: number;
   longitude: number;
-  landlordId: string;
 }
 
 const validListingArb: fc.Arbitrary<ValidListing> = fc.record({
@@ -56,7 +54,6 @@ const validListingArb: fc.Arbitrary<ValidListing> = fc.record({
   propertyType: propertyTypeArb,
   latitude: latArb,
   longitude: lngArb,
-  landlordId: landlordIdArb,
 });
 
 describe('Listings Handler Property Tests', () => {
@@ -80,7 +77,7 @@ describe('Listings Handler Property Tests', () => {
         expect(createBody.success).toBe(true);
 
         const created = createBody.data;
-        expect(created.status).toBe('active');
+        expect(created.status).toBe('approved');
         expect(created.geohash).toHaveLength(5);
 
         // Round-trip: fetch by listingId
@@ -98,7 +95,7 @@ describe('Listings Handler Property Tests', () => {
         expect(fetched.price).toBe(payload.price);
         expect(fetched.latitude).toBe(payload.latitude);
         expect(fetched.longitude).toBe(payload.longitude);
-        expect(fetched.status).toBe('active');
+        expect(fetched.status).toBe('approved');
         expect(fetched.geohash).toHaveLength(5);
       }),
       { numRuns: 100 }
@@ -117,7 +114,6 @@ describe('Listings Handler Property Tests', () => {
       propertyType: fc.option(propertyTypeArb, { nil: undefined }),
       latitude: fc.option(latArb, { nil: undefined }),
       longitude: fc.option(lngArb, { nil: undefined }),
-      landlordId: fc.option(landlordIdArb, { nil: undefined }),
     }).filter((rec) =>
       // At least one required field must be absent or undefined
       Object.values(rec).some((v) => v === undefined || v === null || v === '')
@@ -153,7 +149,7 @@ describe('Listings Handler Property Tests', () => {
 
   // Feature: rentvision-platform, Property 3: Listing list count consistency
   // Validates: Requirements 1.5
-  it('Property 3: GET /listings returns count === items.length and all items are active', async () => {
+  it('Property 3: GET /listings returns count === items.length and all items are approved', async () => {
     await fc.assert(
       fc.asyncProperty(
         fc.array(validListingArb, { minLength: 1, maxLength: 10 }),
@@ -174,7 +170,7 @@ describe('Listings Handler Property Tests', () => {
           const { items, count } = body.data;
           expect(count).toBe(items.length);
           for (const item of items) {
-            expect(item.status).toBe('active');
+            expect(item.status).toBe('approved');
           }
         }
       ),

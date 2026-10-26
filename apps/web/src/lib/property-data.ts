@@ -65,7 +65,7 @@ export const mockProperties: MockProperty[] = [
     ],
     description:
       "A bright, modern apartment with comfortable living spaces in Bole.",
-    amenities: ["Fitted kitchen", "Built-in wardrobes", "Balcony"],
+    amenities: ["Generator", "Water Tank", "WiFi", "Parking"],
     trustStatus: "Verification pending",
   },
   {
@@ -86,7 +86,7 @@ export const mockProperties: MockProperty[] = [
     ],
     description:
       "A spacious apartment in Kazanchis with room for family living.",
-    amenities: ["Fitted kitchen", "Laundry area", "Secure parking"],
+    amenities: ["Generator", "Water Tank", "Parking", "WiFi"],
     trustStatus: "Verification pending",
   },
   {
@@ -107,7 +107,7 @@ export const mockProperties: MockProperty[] = [
     ],
     description:
       "A modern villa in CMC with generous indoor and outdoor space.",
-    amenities: ["Private garden", "Fitted kitchen", "Secure parking"],
+    amenities: ["Generator", "Water Tank", "Parking", "WiFi"],
     trustStatus: "Verification pending",
   },
   {
@@ -128,7 +128,7 @@ export const mockProperties: MockProperty[] = [
     ],
     description:
       "A comfortable one-bedroom apartment in Sar Bet at an accessible price.",
-    amenities: ["Fitted kitchen", "Built-in wardrobes"],
+    amenities: ["Water Tank", "WiFi", "Parking", "Generator"],
     trustStatus: "Verification pending",
   },
 ];

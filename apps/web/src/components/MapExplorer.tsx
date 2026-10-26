@@ -109,7 +109,6 @@ export function PropertyMap({
 
 // Keep MapExplorer for backward compatibility if needed, but updated to use PropertyMap
 export function MapExplorer() {
-  // ... (could be simplified to just use PropertyMap with its own internal state)
   return <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9f9f9' }}>
     <p>Please use the <Link href="/properties">Discover</Link> page for the full map experience.</p>
   </div>;

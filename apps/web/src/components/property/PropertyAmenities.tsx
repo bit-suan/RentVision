@@ -1,4 +1,5 @@
 import EmptyState from "@/components/ui/EmptyState";
+import { useTranslations } from "next-intl";
 
 interface PropertyAmenitiesProps {
   amenities: string[];
@@ -7,9 +8,14 @@ interface PropertyAmenitiesProps {
 export default function PropertyAmenities({
   amenities,
 }: PropertyAmenitiesProps) {
+  const t = useTranslations("PropertyAmenities");
+
   return (
-    <section aria-labelledby="property-amenities-heading">
-      <h2 id="property-amenities-heading">Amenities</h2>
+    <section
+      aria-labelledby="property-amenities-heading"
+      className="detail-panel property-amenities-panel"
+    >
+      <h2 id="property-amenities-heading">{t("heading")}</h2>
       {amenities.length > 0 ? (
         <ul className="amenities-list">
           {amenities.map((amenity) => (
@@ -18,8 +24,8 @@ export default function PropertyAmenities({
         </ul>
       ) : (
         <EmptyState
-          title="No amenities listed"
-          message="Amenity details have not been added for this property."
+          title={t("noAmenitiesTitle")}
+          message={t("noAmenitiesMessage")}
         />
       )}
     </section>

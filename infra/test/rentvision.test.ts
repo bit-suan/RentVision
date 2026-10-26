@@ -40,6 +40,6 @@ describe('RentVision Infrastructure Stack', () => {
   test('creates API Gateway HTTP API and Lambda handlers', () => {
     const template = synthTemplate();
     template.resourceCountIs('AWS::ApiGatewayV2::Api', 1);
-    template.resourceCountIs('AWS::Lambda::Function', 3);
+    template.resourceCountIs('AWS::Lambda::Function', 4);
   });
 });

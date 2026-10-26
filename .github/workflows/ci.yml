@@ -72,7 +72,10 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: infra/package-lock.json
+          cache-dependency-path: |
+            infra/package-lock.json
+            services/api/package-lock.json
+      - run: npm ci --prefix ../services/api
       - run: npm ci
       - run: npm test
       - run: npx cdk synth --quiet
