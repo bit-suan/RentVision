@@ -6,7 +6,7 @@ from typing import Sequence
 from rentvision_ai.schemas.document import ExtractedDocument
 from rentvision_ai.schemas.lease_qa import LeaseChunk
 
-# Common stop words, preserving negation terms critical for legal contracts (no, nor, not)
+# Common English stop words, preserving negation terms critical for legal contracts (no, nor, not)
 STOP_WORDS: set[str] = {
     "a", "about", "above", "after", "again", "against", "all", "am", "an", "and",
     "any", "are", "as", "at", "be", "because", "been", "before", "being",
@@ -23,6 +23,22 @@ STOP_WORDS: set[str] = {
     "through", "to", "too", "under", "until", "up", "very", "was", "we",
     "were", "what", "when", "where", "which", "while", "who", "whom",
     "why", "with", "would", "you", "your", "yours", "yourself",
+}
+
+# Amharic conversational, auxiliary, and interrogative stop words
+AMHARIC_STOP_WORDS: set[str] = {
+    "ነው", "ናት", "ናቸው", "ነበር", "ነበሩ", "ሆኖ", "ሆነ", "እንደሆነ",
+    "ላይ", "ውስጥ", "ጋር", "ወደ", "ስለ", "እንደ",
+    "ምን", "ስንት", "መቼ", "የት", "ማን", "እንዴት", "ለምን",
+}
+
+# Normalization map for phonetically identical Ethiopic character variants
+AMHARIC_CHAR_MAP: dict[str, str] = {
+    "ሐ": "ሀ", "ሑ": "ሁ", "ሒ": "ሂ", "ሓ": "ሃ", "ሔ": "ሄ", "ሕ": "ህ", "ሖ": "ሆ",
+    "ኀ": "ሀ", "ኁ": "ሁ", "ኂ": "ሂ", "ኃ": "ሃ", "ኄ": "ሄ", "ኅ": "ህ", "ኆ": "ሆ",
+    "ሠ": "ሰ", "ሡ": "ሱ", "ሢ": "ሲ", "ሣ": "ሳ", "ሤ": "ሴ", "ሥ": "ስ", "ሦ": "ሶ",
+    "ዐ": "አ", "ዑ": "ኡ", "ዒ": "ኢ", "ዓ": "ኣ", "ዔ": "ኤ", "ዕ": "እ", "ዖ": "ኦ",
+    "ፀ": "ጸ", "ፁ": "ጹ", "ፂ": "ጺ", "ፃ": "ጻ", "ፄ": "ጼ", "ፅ": "ጽ", "ፆ": "ጾ",
 }
 
 # Domain stem normalization for high-frequency lease terms
@@ -66,9 +82,43 @@ DOMAIN_STEMS: dict[str, str] = {
 }
 
 
+def normalize_amharic(text: str) -> str:
+    """Normalize interchangeable Ethiopic characters."""
+    return "".join(AMHARIC_CHAR_MAP.get(ch, ch) for ch in text)
+
+
+def stem_amharic_token(word: str) -> str:
+    """Strip common grammatical affixes and normalize interchangeable characters."""
+    norm = normalize_amharic(word)
+
+    # Strip 2-letter prefixes (e.g. ስለ, እንደ) if remaining root is at least 2 characters
+    for pfx in ("ስለ", "እንደ"):
+        if norm.startswith(pfx) and len(norm) >= len(pfx) + 2:
+            norm = norm[len(pfx):]
+            break
+
+    # Strip single-letter prefixes (e.g. የ, በ, ለ, ከ) if remaining root is at least 2 characters
+    for pfx in ("የ", "በ", "ለ", "ከ"):
+        if norm.startswith(pfx) and len(norm) >= 3:
+            norm = norm[len(pfx):]
+            break
+
+    # Strip common suffixes (plural, accusative/definite)
+    for sfx in ("ዎችን", "ዎች", "ውን", "ኡን", "ዋን", "ያውን", "ኡ"):
+        if norm.endswith(sfx) and len(norm) >= len(sfx) + 2:
+            norm = norm[:-len(sfx)]
+            break
+
+    return norm
+
+
 def stem_token(word: str) -> str:
-    """Normalize English tokens using domain stems and morphological rules."""
+    """Normalize English or Amharic tokens using domain stems and morphological rules."""
     w = word.lower()
+    # Check for Ethiopic characters
+    if any("\u1200" <= ch <= "\u137F" or "\u2D80" <= ch <= "\u2DDF" or "\uAB00" <= ch <= "\uAB2F" for ch in w):
+        return stem_amharic_token(w)
+
     if w in DOMAIN_STEMS:
         return DOMAIN_STEMS[w]
     if len(w) <= 3:
@@ -92,15 +142,139 @@ def stem_token(word: str) -> str:
 
 def tokenize(text: str) -> list[str]:
     """Tokenize text into lowercase stemmed tokens, normalizing numbers and supporting Ethiopic."""
+    # Replace Ethiopic punctuation marks with spaces before splitting
+    cleaned = re.sub(r"[\u1360-\u1368]", " ", text)
     # Normalize comma-formatted numbers so '48,000' matches '48000'
-    normalized_text = re.sub(r"(?<=\d),(?=\d)", "", text)
-    # Match alphanumeric words, currency symbols, and Ethiopic Unicode characters (\u1200-\u137F)
-    raw_tokens = re.findall(r"[a-zA-Z0-9_\$€\u1200-\u137F]+", normalized_text.lower())
+    normalized_text = re.sub(r"(?<=\d),(?=\d)", "", cleaned)
+    # Match alphanumeric words, currency symbols, and Ethiopic characters
+    raw_tokens = re.findall(
+        r"[a-zA-Z0-9_\$€\u1200-\u135A\u1369-\u137C\u1380-\u139F\u2D80-\u2DDF\uAB00-\uAB2F]+",
+        normalized_text.lower(),
+    )
     tokens: list[str] = []
     for t in raw_tokens:
-        if t not in STOP_WORDS and len(t) > 1:
+        if t not in STOP_WORDS and t not in AMHARIC_STOP_WORDS and len(t) > 1:
             tokens.append(stem_token(t))
     return tokens
+
+
+# Cross-Language Tenancy Domain Concept Lexicon
+CLQE_CONCEPTS: list[dict[str, list[str]]] = [
+    {
+        "en": ["deposit", "security", "refundable", "refund", "escrow", "guarantee", "caution"],
+        "am": ["ዋስትና", "ተቀማጭ", "ዲፖዚት", "ተመላሽ", "ዋስ", "ማስያዣ"],
+    },
+    {
+        "en": ["rent", "rental", "rents"],
+        "am": ["ኪራይ"],
+    },
+    {
+        "en": ["monthly", "month", "months"],
+        "am": ["ወርሃዊ", "በወር", "ወር"],
+    },
+    {
+        "en": ["year", "years", "annual", "annually", "yearly"],
+        "am": ["ዓመት", "አመት"],
+    },
+    {
+        "en": ["pay", "payment", "payable", "due", "paid", "paying"],
+        "am": ["ክፍያ", "የሚከፈል", "መክፈል", "ተከፋይ"],
+    },
+    {
+        "en": ["price", "cost", "amount", "fee", "rate", "charge", "birr", "etb"],
+        "am": ["ዋጋ", "መጠን", "ብር", "ሂሳብ"],
+    },
+    {
+        "en": ["term", "duration", "period", "lease", "contract", "agreement", "renew", "renewal", "commence", "start", "end", "expire", "valid", "beginning"],
+        "am": ["ጊዜ", "ዘመን", "ውል", "ስምምነት", "ማደስ", "ዕድሳት", "መጀመሪያ", "መጨረሻ", "ማብቂያ", "የሚጀምር"],
+    },
+    {
+        "en": ["terminate", "termination", "notice", "vacate", "cancel", "cancellation", "breach", "penalty", "days", "leave", "quit"],
+        "am": ["ማቋረጥ", "መቋረጥ", "ማስጠንቀቂያ", "መልቀቅ", "ማፍረስ", "ቅጣት", "ቀናት", "ቀን"],
+    },
+    {
+        "en": ["evict", "eviction", "immediate", "court", "legal", "law", "remedy"],
+        "am": ["ማስወጣት", "ህግ", "ህጋዊ", "ፍርድ ቤት", "ወዲያውኑ", "አስገዳጅ"],
+    },
+    {
+        "en": ["utility", "utilities", "electricity", "electric", "power", "generator", "water", "wifi", "internet", "trash", "waste", "sewage"],
+        "am": ["መገልገያ", "መብራት", "ኤሌክትሪክ", "ኃይል", "ጀነሬተር", "ውሃ", "ዋይፋይ", "ኢንተርኔት", "ቆሻሻ", "ፍሳሽ"],
+    },
+    {
+        "en": ["maintenance", "repair", "repairs", "damage", "damages", "maintain", "fix", "alteration", "paint", "plumbing", "pipe", "pipes", "structural", "leak", "negligence", "upkeep"],
+        "am": ["ጥገና", "እድሳት", "ብልሽት", "ጉዳት", "መጠገን", "ማደስ", "ቀለም", "ቧንቧ", "መዋቅር", "ቸልተኝነት", "አያያዝ"],
+    },
+    {
+        "en": ["pet", "pets", "animal", "animals", "dog", "dogs", "cat", "cats"],
+        "am": ["እንስሳ", "እንስሳት", "ውሻ", "ውሾች", "ድመት"],
+    },
+    {
+        "en": ["sublease", "sublet", "subletting", "assign", "assignment"],
+        "am": ["ማከራየት", "አሳልፎ", "ስምምነት"],
+    },
+    {
+        "en": ["smoke", "smoking", "guest", "guests", "noise", "quiet"],
+        "am": ["ሲጋራ", "ማጨስ", "እንግዳ", "እንግዶች", "ጫጫታ", "ጸጥታ"],
+    },
+    {
+        "en": ["parking", "garage", "vehicle", "car", "spot", "space", "lot", "capacity"],
+        "am": ["መኪና", "ፓርኪንግ", "ማቆሚያ", "ጋራዥ", "ቦታ"],
+    },
+    {
+        "en": ["bank", "account", "transfer", "cbe", "telebirr", "iban"],
+        "am": ["ባንክ", "ሂሳብ", "ቁጥር", "ቴሌብር"],
+    },
+    {
+        "en": ["elevator", "lift"],
+        "am": ["ሊፍት", "አሳንሰር"],
+    },
+    {
+        "en": ["prohibit", "prohibited", "ban", "banned", "permit", "permitted", "allow", "allowed", "permission", "restrict", "restricted", "forbidden"],
+        "am": ["የተከለከለ", "ክልክል", "እገዳ", "የተፈቀደ", "ፈቃድ", "ይፈቀዳል", "አይፈቀድም"],
+    },
+    {
+        "en": ["landlord", "lessor", "owner", "tenant", "lessee", "renter", "occupant"],
+        "am": ["አከራይ", "ባለቤት", "ተከራይ"],
+    },
+    {
+        "en": ["apartment", "house", "flat", "premises", "property", "room", "bedroom", "unit", "building"],
+        "am": ["አፓርታማ", "ቤት", "ግቢ", "ህንፃ", "ክፍል", "መኖሪያ"],
+    },
+]
+
+
+def _build_cross_lang_index() -> dict[str, set[str]]:
+    """Build bidirectional cross-language term expansion index."""
+    index: dict[str, set[str]] = {}
+    for group in CLQE_CONCEPTS:
+        en_stemmed = {stem_token(w) for w in group["en"]}
+        am_stemmed = {stem_token(w) for w in group["am"]}
+
+        # Map English terms to Amharic equivalents
+        for en_t in en_stemmed:
+            index.setdefault(en_t, set()).update(am_stemmed)
+
+        # Map Amharic terms to English equivalents and Amharic domain synonyms
+        for am_t in am_stemmed:
+            index.setdefault(am_t, set()).update(en_stemmed)
+            index.setdefault(am_t, set()).update(am_stemmed - {am_t})
+
+    return index
+
+
+CROSS_LANG_SYNONYMS: dict[str, set[str]] = _build_cross_lang_index()
+
+
+def expand_cross_language_query(query_tokens: Sequence[str]) -> list[str]:
+    """Expand query tokens bidirectionally between English and Amharic."""
+    expanded: list[str] = list(query_tokens)
+    seen: set[str] = set(query_tokens)
+    for t in query_tokens:
+        for syn in CROSS_LANG_SYNONYMS.get(t, ()):
+            if syn not in seen:
+                expanded.append(syn)
+                seen.add(syn)
+    return expanded
 
 
 def chunk_document(
@@ -244,13 +418,18 @@ class BM25Retriever:
         if not query_tokens:
             return []
 
+        expanded_tokens = expand_cross_language_query(query_tokens)
+        direct_tokens = set(query_tokens)
+
         scores: list[float] = [0.0] * self.doc_count
         chunk_matched_terms: list[set[str]] = [set() for _ in range(self.doc_count)]
 
-        for q_term in set(query_tokens):
+        for q_term in set(expanded_tokens):
             idf = self.idf.get(q_term)
             if idf is None or idf <= 0.0:
                 continue
+
+            term_weight = 1.0 if q_term in direct_tokens else 0.85
 
             for idx, tokens in enumerate(self.doc_tokens):
                 tf = tokens.count(q_term)
@@ -261,7 +440,7 @@ class BM25Retriever:
                 doc_len = self.doc_lens[idx]
                 denom = tf + self.k1 * (1.0 - self.b + self.b * (doc_len / self.avg_doc_len))
                 term_score = idf * (tf * (self.k1 + 1.0)) / denom
-                scores[idx] += term_score
+                scores[idx] += term_score * term_weight
 
         # Boost exact phrase matches
         clean_query = query.strip().lower()

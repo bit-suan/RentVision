@@ -52,7 +52,7 @@ from rentvision_ai.schemas.lease_qa import (
     SourceCitation,
 )
 from rentvision_ai.schemas.property import ExtractedPropertyListing
-from rentvision_ai.services.lease_qa import LeaseQAService
+from rentvision_ai.services.lease_qa import LeaseQAService, resolve_qa_locale
 from rentvision_ai.services.listing_extraction import ListingExtractionService
 
 
@@ -159,7 +159,7 @@ def get_listing_service() -> ListingExtractionService:
 
 
 def get_lease_qa_service() -> LeaseQAService:
-    client = get_default_llm_client()
+    client = get_default_llm_client(allow_mock_fallback=True)
     return LeaseQAService(client=client)
 
 
@@ -253,11 +253,15 @@ def create_app() -> FastAPI:
         response: Response,
         service: LeaseQAService = Depends(get_lease_qa_service),
     ) -> LeaseQAResponse:
-        target_locale = resolve_locale(
-            payload_locale=payload.locale,
-            accept_language=raw_request.headers.get("accept-language"),
-        )
-        response.headers["Content-Language"] = target_locale
+        explicit_locale = payload.locale if (payload.locale and payload.locale.strip().lower() in SUPPORTED_LOCALES) else None
+        header_locale = None
+        accept_header = raw_request.headers.get("accept-language")
+        if accept_header:
+            parsed_header = resolve_locale(accept_language=accept_header)
+            if parsed_header != DEFAULT_LOCALE or any(loc in accept_header.lower() for loc in ("en", "am")):
+                header_locale = parsed_header
+
+        target_locale = resolve_qa_locale(payload.question, requested_locale=explicit_locale or header_locale)
 
         if not payload.pdf_base64 and not payload.document_text:
             raise HTTPException(
@@ -295,8 +299,9 @@ def create_app() -> FastAPI:
                     pdf_bytes=pdf_bytes,
                     filename="uploaded_lease.pdf",
                     top_k=payload.top_k,
+                    locale=target_locale,
                 )
-                res.response_language = target_locale
+                response.headers["Content-Language"] = res.response_language or target_locale
                 return res
 
             # Fall back to plain text if provided
@@ -319,8 +324,9 @@ def create_app() -> FastAPI:
                 question=payload.question,
                 document=doc,
                 top_k=payload.top_k,
+                locale=target_locale,
             )
-            res.response_language = target_locale
+            response.headers["Content-Language"] = res.response_language or target_locale
             return res
 
         except HTTPException:

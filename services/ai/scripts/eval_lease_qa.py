@@ -44,11 +44,15 @@ def get_mock_evaluation_client() -> MockLLMClient:
     def handler(prompt: str, system_prompt: str | None) -> str:
         # Extract user question from prompt
         question_text = ""
-        lines = prompt.splitlines()
-        for idx, line in enumerate(lines):
-            if "USER QUESTION:" in line and idx + 1 < len(lines):
-                question_text = lines[idx + 1].strip().lower()
-                break
+        q_match = re.search(r"<user_question>\s*([\s\S]*?)\s*</user_question>", prompt, re.IGNORECASE)
+        if q_match:
+            question_text = q_match.group(1).strip().lower()
+        else:
+            lines = prompt.splitlines()
+            for idx, line in enumerate(lines):
+                if "USER QUESTION:" in line and idx + 1 < len(lines):
+                    question_text = lines[idx + 1].strip().lower()
+                    break
 
         if not question_text:
             question_text = prompt.lower()
@@ -260,10 +264,11 @@ def evaluate_dataset(dataset_path: Path, use_live_client: bool = False) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate RentVision Lease Q&A RAG Service")
+    default_dataset = Path(__file__).resolve().parent.parent / "data" / "lease_eval" / "evaluation_dataset.json"
     parser.add_argument(
         "--dataset",
         type=str,
-        default="services/ai/data/lease_eval/evaluation_dataset.json",
+        default=str(default_dataset),
         help="Path to evaluation dataset JSON",
     )
     parser.add_argument(
@@ -275,12 +280,17 @@ def main() -> None:
 
     data_path = Path(args.dataset)
     if not data_path.is_file():
-        repo_root = Path(__file__).resolve().parent.parent.parent
-        alt = repo_root / args.dataset
-        if alt.is_file():
-            data_path = alt
+        candidates = [
+            default_dataset,
+            Path(__file__).resolve().parent.parent / args.dataset,
+            Path(__file__).resolve().parent.parent.parent.parent / args.dataset,
+        ]
+        for c in candidates:
+            if c.is_file():
+                data_path = c
+                break
         else:
-            print(f"Dataset file not found: {data_path}")
+            print(f"Dataset file not found: {args.dataset}")
             sys.exit(1)
 
     evaluate_dataset(data_path, use_live_client=args.live)
