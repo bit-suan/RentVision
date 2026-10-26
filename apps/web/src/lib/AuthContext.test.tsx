@@ -1,6 +1,6 @@
-// @ts-nocheck
+
 import React from "react";
-import { render, screen, act, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { AuthProvider, useAuth } from "./AuthContext";
 import * as amplifyAuth from "aws-amplify/auth";
 

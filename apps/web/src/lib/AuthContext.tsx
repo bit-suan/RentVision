@@ -7,7 +7,6 @@ import {
   confirmSignUp as amplifyConfirmSignUp,
   signOut as amplifySignOut,
   getCurrentUser,
-  fetchAuthSession,
   resendSignUpCode as amplifyResendSignUpCode,
   resetPassword as amplifyResetPassword,
   confirmResetPassword as amplifyConfirmResetPassword,
@@ -54,7 +53,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    void checkUser();
+    (async () => {
+      await checkUser();
+    })();
   }, [checkUser]);
 
   const signIn = async (input: SignInInput) => {

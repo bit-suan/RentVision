@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import ListingGrid from "@/components/property/ListingGrid";
 import ListingSearchControls from "@/components/property/ListingSearchControls";
@@ -19,6 +19,7 @@ export default function ListingDiscovery() {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+const mapCenterTimeout = useRef<NodeJS.Timeout | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'map'>(
     (searchParams.get("viewMode") as 'grid' | 'map') || 'grid'
@@ -97,7 +98,7 @@ export default function ListingDiscovery() {
       });
   };
 
-  const handleFilterChange = (newFilters: ListingSearchQuery) => {
+  const handleFilterChange = useCallback((newFilters: ListingSearchQuery) => {
     setLoading(true);
     const params = new URLSearchParams();
     Object.entries(newFilters).forEach(([key, value]) => {
@@ -106,17 +107,16 @@ export default function ListingDiscovery() {
       }
     });
     router.push(`/properties?${params.toString()}`);
-  };
+  }, [router]);
 
   // Debounced map center change to avoid excessive API requests
-  const handleMapCenterChange = useMemo(() => {
-    let timeout: NodeJS.Timeout;
-    return (lat: number, lng: number) => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        handleFilterChange({ ...filters, lat, lng });
-      }, 800);
-    };
+  const handleMapCenterChange = useCallback((lat: number, lng: number) => {
+    if (mapCenterTimeout.current) {
+      clearTimeout(mapCenterTimeout.current);
+    }
+    mapCenterTimeout.current = setTimeout(() => {
+      handleFilterChange({ ...filters, lat, lng });
+    }, 800);
   }, [filters, handleFilterChange]);
 
   if (error) {
