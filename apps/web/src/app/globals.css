@@ -1,25 +1,39 @@
 :root {
   color-scheme: light;
-  --color-ink: #172b2a;
-  --color-muted: #60716f;
-  --color-primary: #087f69;
-  --color-primary-dark: #066653;
-  --color-primary-soft: #e7f4f0;
-  --color-surface: #ffffff;
-  --color-canvas: #f5f8f7;
-  --color-border: #dce6e3;
-  --color-warning: #87530b;
+
+  /* ── Brand palette (from logo) ───────────────────────────────────────── */
+  /* Deep indigo: the "Rent" word-mark and icon fill */
+  --brand-deep:   #2D2B6B;
+  /* Lavender: the "Vision" accent and wave gradient */
+  --brand-light:  #9B8EC4;
+  /* Soft lavender tint for backgrounds / soft states */
+  --brand-soft:   #EDE9F8;
+  /* Darker indigo for hover / pressed states */
+  --brand-dark:   #1E1C50;
+  /* Mid purple for borders and dividers */
+  --brand-border: #C4B8E8;
+
+  /* ── Semantic aliases ────────────────────────────────────────────────── */
+  --color-ink:          #1A1A3E;
+  --color-muted:        #6B6893;
+  --color-primary:      var(--brand-deep);
+  --color-primary-dark: var(--brand-dark);
+  --color-primary-soft: var(--brand-soft);
+  --color-surface:      #ffffff;
+  --color-canvas:       #F6F5FC;
+  --color-border:       #DDD9F0;
+  --color-warning:      #87530b;
   --color-warning-soft: #fff4d8;
-  --shadow-card: 0 12px 32px rgb(23 43 42 / 7%);
-  --radius-card: 16px;
-  --content-width: 1280px;
+  --shadow-card:        0 12px 32px rgb(45 43 107 / 8%);
+  --radius-card:        16px;
+  --content-width:      1280px;
 
   /* Legacy alias vars used in auth/shell components */
-  --card: #ffffff;
-  --line: #dce6e3;
-  --green: #066653;
+  --card:   #ffffff;
+  --line:   #DDD9F0;
+  --green:  var(--brand-deep);
   --danger: #a63232;
-  --muted: #60716f;
+  --muted:  #6B6893;
 }
 
 * {
@@ -36,7 +50,7 @@ body {
   margin: 0;
   color: var(--color-ink);
   background: var(--color-canvas);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
   font-size: 16px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -50,7 +64,7 @@ textarea {
 }
 
 a {
-  color: var(--color-primary-dark);
+  color: var(--brand-deep);
   text-underline-offset: 0.2em;
 }
 
@@ -59,13 +73,13 @@ a:hover {
 }
 
 :focus-visible {
-  outline: 3px solid #31a98e;
+  outline: 3px solid var(--brand-light);
   outline-offset: 3px;
 }
 
 ::selection {
-  color: var(--color-ink);
-  background: #bfe9dd;
+  color: white;
+  background: var(--brand-light);
 }
 
 .app-body {
@@ -100,11 +114,43 @@ a:hover {
 }
 
 .site-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   color: var(--color-ink);
   font-size: 1.25rem;
   font-weight: 750;
   letter-spacing: -0.04em;
   text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+
+.site-brand:hover {
+  opacity: 0.88;
+  color: var(--color-ink);
+}
+
+.site-brand__logo {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  display: block;
+}
+
+.site-brand__wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  letter-spacing: -0.03em;
+}
+
+.site-brand__rent {
+  color: var(--brand-deep);
+  font-weight: 800;
+}
+
+.site-brand__vision {
+  color: var(--brand-light);
+  font-weight: 800;
 }
 
 .site-brand__mark {
@@ -115,7 +161,7 @@ a:hover {
   place-items: center;
   border-radius: 9px;
   color: white;
-  background: var(--color-primary);
+  background: linear-gradient(135deg, var(--brand-deep) 0%, var(--brand-light) 100%);
   font-size: 0.9rem;
   letter-spacing: 0;
 }
@@ -142,8 +188,14 @@ a:hover {
 }
 
 .site-nav a:hover {
-  color: var(--color-primary-dark);
-  background: var(--color-primary-soft);
+  color: var(--brand-deep);
+  background: var(--brand-soft);
+}
+
+.site-nav a[data-active="true"],
+.site-nav a:focus-visible {
+  color: var(--brand-deep);
+  background: var(--brand-soft);
 }
 
 .site-main {
@@ -292,7 +344,7 @@ p {
 }
 .eyebrow {
   margin-bottom: 12px;
-  color: var(--color-primary-dark);
+  color: var(--brand-deep);
   font-size: 0.78rem;
   font-weight: 750;
   letter-spacing: 0.12em;
@@ -344,7 +396,7 @@ p {
 
 .button--primary:hover:not(:disabled) {
   color: white;
-  background: var(--color-primary-dark);
+  background: var(--brand-deep);
 }
 
 .button--secondary {
@@ -354,14 +406,19 @@ p {
 }
 
 .button--secondary:hover:not(:disabled) {
-  color: var(--color-primary-dark);
-  border-color: #a7cec2;
-  background: #f9fcfb;
+  color: var(--brand-deep);
+  border-color: var(--brand-border);
+  background: var(--brand-soft);
 }
 
 .button--quiet {
-  color: var(--color-primary-dark);
+  color: var(--brand-deep);
   background: transparent;
+}
+
+.button--quiet:hover:not(:disabled) {
+  color: var(--brand-dark);
+  background: var(--brand-soft);
 }
 
 .home-benefits {
@@ -560,7 +617,7 @@ p {
 .property-card__spec .spec-icon {
   width: 15px;
   height: 15px;
-  color: var(--color-primary-dark);
+  color: var(--brand-light);
   stroke-width: 2;
   flex-shrink: 0;
 }
@@ -568,7 +625,7 @@ p {
 .property-card__price {
   font-size: 1.15rem;
   font-weight: 800;
-  color: var(--color-primary-dark);
+  color: var(--brand-deep);
 }
 
 .property-card__statuses {
@@ -595,8 +652,8 @@ p {
 }
 
 .badge--success {
-  color: #176343;
-  background: #e2f5e9;
+  color: var(--brand-dark);
+  background: var(--brand-soft);
 }
 
 .badge--warning {
@@ -633,14 +690,14 @@ p {
 }
 
 .property-breadcrumb__link {
-  color: var(--color-primary-dark);
+  color: var(--brand-deep);
   font-weight: 600;
   text-decoration: none;
   transition: color 0.15s ease;
 }
 
 .property-breadcrumb__link:hover {
-  color: var(--color-primary);
+  color: var(--brand-light);
   text-decoration: underline;
 }
 
@@ -658,7 +715,7 @@ p {
   height: clamp(340px, 42vw, 460px);
   border-radius: var(--radius-card);
   overflow: hidden;
-  background: #e7eeeb;
+  background: var(--brand-soft);
 }
 
 .property-gallery img {
@@ -739,7 +796,7 @@ p {
 .property-booking-card__price-label {
   font-size: 1.55rem;
   font-weight: 800;
-  color: var(--color-primary-dark);
+  color: var(--brand-deep);
   line-height: 1.2;
 }
 
@@ -755,9 +812,9 @@ p {
   flex-direction: column;
   gap: 10px;
   padding: 18px;
-  border: 1px solid #cde4dc;
+  border: 1px solid var(--brand-border);
   border-radius: 12px;
-  background: linear-gradient(135deg, #f2faf7, #e8f5f1);
+  background: linear-gradient(135deg, var(--brand-soft), #e4dff7);
 }
 
 .property-booking-card__lease-title {
@@ -800,7 +857,7 @@ p {
     align-self: flex-start;
     padding: 8px 14px;
     border-radius: 10px;
-    color: var(--color-primary-dark);
+    color: var(--brand-deep);
     background: var(--color-primary-soft);
     font-size: 1.25rem;
   }
@@ -1038,8 +1095,8 @@ p {
 .spinner__icon {
   width: 20px;
   height: 20px;
-  border: 2px solid #c6d8d2;
-  border-top-color: var(--color-primary);
+  border: 2px solid var(--brand-border);
+  border-top-color: var(--brand-deep);
   border-radius: 50%;
   animation: spin 750ms linear infinite;
 }
@@ -1210,7 +1267,7 @@ p {
   align-items: stretch;
   overflow: hidden;
   isolation: isolate;
-  background: #193a3b;
+  background: #12103A;
 }
 
 .landing-hero__image {
@@ -1228,10 +1285,10 @@ p {
   inset: 0;
   background: linear-gradient(
     90deg,
-    rgb(4 30 34 / 84%) 0%,
-    rgb(4 30 34 / 66%) 28%,
-    rgb(4 30 34 / 25%) 53%,
-    rgb(4 30 34 / 3%) 78%
+    rgb(18 16 58 / 88%) 0%,
+    rgb(45 43 107 / 72%) 28%,
+    rgb(45 43 107 / 30%) 53%,
+    rgb(45 43 107 / 4%) 78%
   );
   content: "";
 }
@@ -1302,13 +1359,15 @@ p {
 .landing-cta--primary {
   min-width: 230px;
   color: white;
-  background: #008866;
-  box-shadow: 0 6px 18px rgb(0 77 57 / 22%);
+  background: linear-gradient(135deg, var(--brand-deep) 0%, #4B47A8 100%);
+  box-shadow: 0 6px 24px rgb(45 43 107 / 35%);
 }
 
 .landing-cta--primary:hover:not(:disabled) {
   color: white;
-  background: #00785a;
+  background: linear-gradient(135deg, var(--brand-dark) 0%, var(--brand-deep) 100%);
+  box-shadow: 0 8px 28px rgb(45 43 107 / 45%);
+  transform: translateY(-2px);
 }
 
 .landing-cta--secondary {
@@ -1327,12 +1386,12 @@ p {
 .landing-capabilities {
   min-height: 390px;
   padding: 25px 0 44px;
-  background: #fbfcfb;
+  background: #FAFAFF;
 }
 
 .landing-capabilities > h2 {
   margin: 0;
-  color: #153d3b;
+  color: var(--brand-deep);
   font-size: clamp(1.8rem, 2.5vw, 2.5rem);
   font-weight: 750;
   letter-spacing: -0.04em;
@@ -1341,11 +1400,11 @@ p {
 
 .landing-capabilities__rule {
   display: block;
-  width: 48px;
-  height: 3px;
+  width: 56px;
+  height: 4px;
   margin: 12px auto 30px;
   border-radius: 999px;
-  background: var(--color-primary);
+  background: linear-gradient(90deg, var(--brand-deep), var(--brand-light));
 }
 
 .landing-feature-grid {
@@ -1401,8 +1460,8 @@ p {
   flex: 0 0 auto;
   place-items: center;
   border-radius: 50%;
-  color: #08785c;
-  background: #e3f0ec;
+  color: var(--brand-deep);
+  background: var(--brand-soft);
 }
 
 .landing-feature__icon svg {
@@ -1416,7 +1475,7 @@ p {
 
 .landing-feature__body h3 {
   margin: 0 0 2px;
-  color: #173d3a;
+  color: var(--brand-deep);
   font-size: clamp(1rem, 1.35vw, 1.25rem);
   font-weight: 750;
   letter-spacing: -0.025em;
@@ -1424,13 +1483,13 @@ p {
 
 .landing-feature__body p {
   margin: 0;
-  color: #607773;
+  color: var(--color-muted);
   font-size: 0.95rem;
 }
 
 .app-body:has(.landing-page) .site-footer {
   border: 0;
-  background: #103c38;
+  background: var(--brand-dark);
 }
 
 .app-body:has(.landing-page) .site-footer__inner {
@@ -1641,7 +1700,7 @@ html:has(.landing-page) {
 .site-footer__contact svg {
   width: 17px;
   height: 17px;
-  stroke: #b8ded4;
+  stroke: var(--brand-light);
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.7;
@@ -1721,7 +1780,7 @@ html:has(.landing-page) {
 }
 
 .language-switcher__btn.is-active {
-  color: var(--color-primary-dark);
+  color: var(--brand-deep);
   font-weight: 750;
 }
 
@@ -1826,7 +1885,7 @@ html:has(.landing-page) {
 }
 
 .price {
-  color: var(--color-primary-dark);
+  color: var(--brand-deep);
   font-weight: 700;
 }
 
@@ -1838,8 +1897,8 @@ html:has(.landing-page) {
 }
 
 .chip {
-  background: var(--color-primary-soft);
-  color: var(--color-primary-dark);
+  background: var(--brand-soft);
+  color: var(--brand-deep);
   border-radius: 999px;
   padding: 4px 10px;
   font-size: 0.82rem;
@@ -1927,7 +1986,7 @@ html:has(.landing-page) {
 }
 
 .auth-footer a {
-  color: var(--green);
+  color: var(--brand-deep);
   font-weight: 600;
 }
 
@@ -1952,7 +2011,7 @@ html:has(.landing-page) {
 }
 
 .auth-link-quiet:hover {
-  color: var(--color-primary-dark);
+  color: var(--brand-deep);
 }
 
 .user-menu {
@@ -1978,8 +2037,8 @@ html:has(.landing-page) {
 }
 
 .success {
-  color: var(--green);
-  background: #ecf4ee;
+  color: var(--brand-dark);
+  background: var(--brand-soft);
   padding: 10px;
   border-radius: 8px;
   font-size: 0.9rem;
