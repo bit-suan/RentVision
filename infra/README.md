@@ -1,77 +1,82 @@
-# RentVision Infrastructure (`infra`)
+# RentVision Infrastructure
 
-This directory contains the AWS Cloud Development Kit (AWS CDK v2) definitions for RentVision's cloud resources using TypeScript.
+This directory contains the AWS CDK infrastructure definitions for RentVision.
 
-## Architecture & Resources Managed by CDK
+## Architecture
 
-- **Amazon DynamoDB**: Tables for property listings, user profiles, and lease metadata.
-- **Amazon S3**: Buckets for property images, 360° panoramic media, and private lease documents.
-- **AWS API Gateway**: HTTP/REST API endpoints, routing, and CORS configuration.
-- **AWS Lambda**: Serverless compute handlers for business logic and integrations.
+RentVision uses a serverless architecture on AWS:
 
-> **Status Notice**: In this setup phase, CDK configuration and project structure are established. No cloud resources have been provisioned or deployed to AWS.
+- **AWS API Gateway (HTTP API)**: Entry point for the backend, handling routing, CORS, and JWT authorization.
+- **Amazon Cognito**: User authentication, providing JWT tokens for authorized requests.
+- **AWS Lambda**: Node.js functions handling business logic for listings, media, and leases.
+- **Amazon DynamoDB**: NoSQL storage for property listings, user data, and lease metadata.
+- **Amazon S3**: Object storage for property media (public-facing but secure) and private lease documents.
+- **AWS Budgets**: Cost monitoring and alerts.
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) (v20+ or v24 LTS; verified with v24.20.0)
-- [AWS CLI v2](https://aws.amazon.com/cli/) (configured with valid AWS credentials)
-- [AWS CDK CLI](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html) (install globally or execute via `npx aws-cdk`):
-  ```powershell
-  npm install -g aws-cdk
-  ```
+- Node.js 20+
+- AWS CLI v2
+- AWS CDK CLI (`npm install -g aws-cdk`)
 
-## Directory Structure
+## Project Structure
 
-```text
-infra/
-├── bin/
-│   └── infra.ts            # CDK entry point creating the RentVisionStack
-├── lib/
-│   └── rentvision-stack.ts # Core infrastructure stack definition
-├── test/
-│   └── rentvision.test.ts  # Infrastructure unit & assertion tests
-├── cdk.json                # CDK runtime configuration
-├── package.json            # Dependencies (@aws-cdk-lib, constructs, typescript)
-├── tsconfig.json           # TypeScript configuration
-└── README.md
-```
+- `bin/infra.ts`: CDK application entry point.
+- `lib/rentvision-stack.ts`: Main infrastructure stack.
+- `lib/constructs/`: Modular resource definitions:
+    - `api-construct.ts`: API Gateway and Lambda functions.
+    - `cognito-construct.ts`: Cognito User Pool and Client.
+    - `dynamodb-construct.ts`: DynamoDB tables.
+    - `s3-construct.ts`: S3 buckets.
 
-## Setup & Commands (Windows PowerShell)
+## Deployment Routes
+
+| Method | Route | Authorization | Purpose |
+|---|---|---|---|
+| GET | `/health` | Public | Health check |
+| GET | `/listings` | Public | List active listings |
+| POST | `/listings` | JWT | Create a new listing |
+| GET | `/listings/{id}` | Public | Get listing details |
+| PUT | `/listings/{id}` | JWT (Owner) | Update a listing |
+| PATCH | `/listings/{id}/status` | JWT (Admin) | Update listing status |
+| POST | `/listings/{id}/images` | JWT (Owner) | Register images for a listing |
+| GET | `/listings/search` | Public | Geospatial radius search |
+| POST | `/media/upload-url` | JWT (Owner) | Get presigned URL for media upload |
+| GET | `/media/download-url` | JWT | Get presigned URL for media download |
+| POST | `/leases/upload-url` | JWT | Get presigned URL for lease upload |
+| GET | `/leases/{id}` | JWT | Get lease details |
+| POST | `/leases/{id}/qa` | JWT | AI-powered lease Q&A |
+
+## Local Development
 
 ### 1. Install Dependencies
-
-From `infra/`:
-
-```powershell
+```bash
 npm install
 ```
 
 ### 2. Synthesize CloudFormation Template
-
-Generate and inspect the synthesized CloudFormation template without deploying:
-
-```powershell
+```bash
 npx cdk synth
 ```
 
-### 3. Compare Local Infrastructure with Deployed Stack
-
-Inspect diff before applying changes:
-
-```powershell
-npx cdk diff
+### 3. Run Tests
+```bash
+npm test
 ```
 
-### 4. Bootstrap AWS Environment (First Time Only)
+## Security
 
-Before first deployment to an AWS account/region:
+- **Least Privilege**: Lambda functions are granted only the necessary permissions to DynamoDB tables and S3 buckets.
+- **JWT Authorization**: Protected routes require a valid Cognito JWT. Handlers verify ownership before allowing mutations.
+- **S3 Security**: All buckets have Block Public Access enabled. Presigned URLs are used for secure media/document access. SSL is enforced for all API and S3 traffic.
 
-```powershell
-npx cdk bootstrap aws://<ACCOUNT_ID>/<REGION>
-```
+## Cost Management
 
-### 5. Deploy Stack
+A budget alert is configured to notify when forecasted monthly costs exceed $25. DynamoDB and Lambda are configured for on-demand billing to minimize costs during low usage.
 
-```powershell
-npx cdk deploy
-```
+## Deployment (Phase 2)
+
+Deployment is currently restricted. Once authorized:
+1. Ensure AWS credentials are configured.
+2. Run `npx cdk deploy`.
+3. Retrieve `ApiUrl` and `UserPoolId` from the deployment outputs.

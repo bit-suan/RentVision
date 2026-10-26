@@ -1,6 +1,8 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
 import { errorResponse, successResponse, createResponse } from '../utils/response';
+import { getActor } from '../utils/request-actor';
+import { requireUser, canModifyListing } from '../utils/auth';
 import {
   MediaType,
   PresignedUrlRequest,
@@ -8,8 +10,6 @@ import {
   MediaDownloadResponse,
 } from '../types';
 import { createDownloadUrl, createUploadUrl, getListing } from '../data';
-import { canModifyListing, isAdmin } from '../utils/auth';
-import { getActor } from '../utils/request-actor';
 
 const ALLOWED_CONTENT_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const ALLOWED_MEDIA_TYPES = new Set<MediaType>(['photo', 'panorama', 'document']);
@@ -68,7 +68,13 @@ export const handler = async (
       `Resource not found for ${method} /${segments.join('/')}`,
       404
     );
-  } catch (err: unknown) {
+  } catch (err: any) {
+    if (err.code === 'UNAUTHENTICATED') {
+      return errorResponse('UNAUTHENTICATED', err.message, 401);
+    }
+    if (err.code === 'UNAUTHORIZED') {
+      return errorResponse('UNAUTHORIZED', err.message, 403);
+    }
     const message = err instanceof Error ? err.message : 'Internal server error';
     console.error('Unhandled error in media handler:', err);
     return errorResponse('INTERNAL_ERROR', message, 500);
@@ -78,6 +84,9 @@ export const handler = async (
 async function handleGenerateUploadUrl(
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> {
+  const actor = getActor(event);
+  requireUser(actor);
+
   if (!event.body) {
     return errorResponse('VALIDATION_ERROR', 'Request body is required', 400);
   }
@@ -95,12 +104,16 @@ async function handleGenerateUploadUrl(
   if (!listingId || typeof listingId !== 'string') {
     return errorResponse('VALIDATION_ERROR', 'listingId is required', 400);
   }
+
+  // Authorization check: User must own the listing to upload media to it
+  const listing = await getListing(listingId);
   if (!listing) {
-    return errorResponse('NOT_FOUND', `Listing with ID '${listingId}' not found`, 404);
+    return errorResponse('NOT_FOUND', 'Listing not found', 404);
   }
-  if (!canModifyListing(listing.landlordId, getActor(event))) {
-    return errorResponse('FORBIDDEN', 'You are not allowed to upload media for this listing', 403);
+  if (!canModifyListing(listing.landlordId, actor)) {
+    return errorResponse('UNAUTHORIZED', 'Not authorized to upload media for this listing', 403);
   }
+
   if (!fileName || typeof fileName !== 'string') {
     return errorResponse('VALIDATION_ERROR', 'fileName is required', 400);
   }
@@ -137,12 +150,18 @@ async function handleGenerateUploadUrl(
 async function handleGenerateDownloadUrl(
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> {
+  const actor = getActor(event);
+  requireUser(actor);
+
   const queryParams = event.queryStringParameters || {};
   const fileKey = queryParams.fileKey || queryParams.key;
 
   if (!fileKey) {
     return errorResponse('VALIDATION_ERROR', 'Query parameter fileKey is required', 400);
   }
+
+  // Basic authorization: user must be authenticated to download media
+  // (In a more restrictive setup, we might check if they have access to the specific listing)
 
   const expiresIn = 60 * 60;
   const downloadUrl = await createDownloadUrl(fileKey, expiresIn);
