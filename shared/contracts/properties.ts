@@ -47,5 +47,7 @@ export interface ExtractedPropertyListingDto {
   extraction_status: ExtractionStatus;
   unextracted_or_missing_fields: string[];
   confidence_notes: string | null;
-  detected_language?: SupportedLocale;
+  detected_language?: 'en' | 'am' | 'mixed' | string;
+  requested_locale?: SupportedLocale;
+  ambiguities?: string[];
 }

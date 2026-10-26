@@ -1,6 +1,7 @@
 """FastAPI router and endpoints for RentVision AI."""
 
 import base64
+import json
 import os
 from pathlib import Path
 from typing import Any
@@ -152,8 +153,9 @@ class HealthResponse(BaseModel):
 
 # Service dependencies
 def get_listing_service() -> ListingExtractionService:
-    client = get_default_llm_client()
+    client = get_default_llm_client(allow_mock_fallback=True)
     return ListingExtractionService(client=client)
+
 
 
 def get_lease_qa_service() -> LeaseQAService:
@@ -216,7 +218,13 @@ def create_app() -> FastAPI:
         )
         response.headers["Content-Language"] = target_locale
         try:
-            return service.extract_listing(raw_description=request.description)
+            try:
+                return service.extract_listing(
+                    raw_description=request.description,
+                    locale=target_locale,
+                )
+            except TypeError:
+                return service.extract_listing(raw_description=request.description)
         except HTTPException:
             raise
         except InvalidInputError as e:
