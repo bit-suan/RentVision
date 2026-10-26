@@ -1,14 +1,18 @@
 import type { PropertyCoordinates } from "@/lib/properties";
+import type { Listing } from "@/lib/types";
+import { PropertyMap } from "../MapExplorer";
 import { useTranslations } from "next-intl";
 
 interface PropertyLocationProps {
   location: string;
   coordinates?: PropertyCoordinates;
+  listing?: Listing;
 }
 
 export default function PropertyLocation({
   location,
   coordinates,
+  listing,
 }: PropertyLocationProps) {
   const t = useTranslations("PropertyLocation");
 
@@ -18,12 +22,18 @@ export default function PropertyLocation({
       className="detail-panel property-location"
     >
       <h2 id="property-location-heading">{t("heading")}</h2>
-      <address>{location}</address>
-      <div aria-live="polite" className="location-preview">
+      <address style={{ marginBottom: '1rem', display: 'block', fontStyle: 'normal' }}>{location}</address>
+      <div aria-live="polite" className="location-preview" style={{ height: '300px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #ddd' }}>
         {coordinates ? (
-          <p>{t("mapPreviewAvailable")}</p>
+          <PropertyMap 
+            listings={listing ? [listing] : []}
+            center={coordinates}
+            radiusKm={0.5}
+          />
         ) : (
-          <p>{t("mapPreviewUnavailable")}</p>
+          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9f9f9', color: '#666' }}>
+            <p>{t("mapPreviewUnavailable")}</p>
+          </div>
         )}
       </div>
     </section>
