@@ -60,6 +60,7 @@ export class RentVisionApi extends Construct {
   public readonly mediaHandler: lambdaNodejs.NodejsFunction;
   /** Lambda function for lease management and AI Q&A. */
   public readonly leaseHandler: lambdaNodejs.NodejsFunction;
+  public readonly healthHandler: lambdaNodejs.NodejsFunction;
 
   constructor(scope: Construct, id: string, props: RentVisionApiProps) {
     super(scope, id);
@@ -162,6 +163,14 @@ export class RentVisionApi extends Construct {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
+    this.healthHandler = new lambdaNodejs.NodejsFunction(this, 'HealthHandler', {
+      ...lambdaDefaults,
+      functionName: `rentvision-health-${props.environment}`,
+      description: 'Returns API health status',
+      entry: path.join(handlersPath, 'health.ts'),
+      handler: 'handler',
+    });
+
     // -------------------------------------------------------------------------
     // HTTP API Gateway
     // -------------------------------------------------------------------------
@@ -174,6 +183,7 @@ export class RentVisionApi extends Construct {
           apigatewayv2.CorsHttpMethod.GET,
           apigatewayv2.CorsHttpMethod.POST,
           apigatewayv2.CorsHttpMethod.PUT,
+          apigatewayv2.CorsHttpMethod.PATCH,
           apigatewayv2.CorsHttpMethod.DELETE,
           apigatewayv2.CorsHttpMethod.OPTIONS,
         ],
@@ -214,6 +224,17 @@ export class RentVisionApi extends Construct {
       integration: listingsIntegration,
     });
 
+    const healthIntegration = new apigatewayv2Integrations.HttpLambdaIntegration(
+      'HealthIntegration',
+      this.healthHandler,
+    );
+
+    this.httpApi.addRoutes({
+      path: '/health',
+      methods: [apigatewayv2.HttpMethod.GET],
+      integration: healthIntegration,
+    });
+
     this.httpApi.addRoutes({
       path: '/listings',
       methods: [apigatewayv2.HttpMethod.POST],
@@ -227,8 +248,26 @@ export class RentVisionApi extends Construct {
     });
 
     this.httpApi.addRoutes({
+      path: '/listings/{id}',
+      methods: [apigatewayv2.HttpMethod.PUT],
+      integration: listingsIntegration,
+    });
+
+    this.httpApi.addRoutes({
       path: '/listings/search',
       methods: [apigatewayv2.HttpMethod.GET],
+      integration: listingsIntegration,
+    });
+
+    this.httpApi.addRoutes({
+      path: '/listings/{id}/status',
+      methods: [apigatewayv2.HttpMethod.PATCH],
+      integration: listingsIntegration,
+    });
+
+    this.httpApi.addRoutes({
+      path: '/listings/{id}/images',
+      methods: [apigatewayv2.HttpMethod.POST],
       integration: listingsIntegration,
     });
 

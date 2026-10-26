@@ -2,7 +2,7 @@ import type {
   APIGatewayProxyEvent,
   APIGatewayProxyResult,
 } from "aws-lambda";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "@jest/globals";
 
 import { handler as healthHandler } from "./health";
 import { handler as createHandler } from "./listings/create";

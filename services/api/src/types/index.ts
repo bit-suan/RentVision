@@ -12,10 +12,9 @@ export enum PropertyType {
 }
 
 export enum ListingStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
+  APPROVED = 'approved',
   PENDING = 'pending',
-  RENTED = 'rented',
+  REJECTED = 'rejected',
 }
 
 export type Currency = 'ETB' | 'USD';
@@ -25,6 +24,26 @@ export interface Address {
   city: string;
   subcity: string;
   woreda: string;
+}
+
+export interface PanoramaHotspot {
+  id: string;
+  pitch: number;
+  yaw: number;
+  text: string;
+  targetSceneId?: string;
+}
+
+export interface PanoramaScene {
+  id: string;
+  title: string;
+  s3Key: string;
+  hotspots: PanoramaHotspot[];
+}
+
+export interface PanoramaTour {
+  defaultSceneId: string;
+  scenes: PanoramaScene[];
 }
 
 export interface Listing {
@@ -45,6 +64,7 @@ export interface Listing {
   amenities: string[];
   mediaKeys: string[];
   panoramaKeys: string[];
+  panorama?: PanoramaTour;
   landlordId: string;
   createdAt: string;
   updatedAt: string;

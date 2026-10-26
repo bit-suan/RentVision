@@ -7,7 +7,9 @@ import {
   PresignedUrlResponse,
   MediaDownloadResponse,
 } from '../types';
-import { createDownloadUrl, createUploadUrl } from '../data';
+import { createDownloadUrl, createUploadUrl, getListing } from '../data';
+import { canModifyListing, isAdmin } from '../utils/auth';
+import { getActor } from '../utils/request-actor';
 
 const ALLOWED_CONTENT_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const ALLOWED_MEDIA_TYPES = new Set<MediaType>(['photo', 'panorama', 'document']);
@@ -88,9 +90,16 @@ async function handleGenerateUploadUrl(
   }
 
   const { listingId, fileName, mediaType, contentType } = body;
+  const listing = await getListing(listingId);
 
   if (!listingId || typeof listingId !== 'string') {
     return errorResponse('VALIDATION_ERROR', 'listingId is required', 400);
+  }
+  if (!listing) {
+    return errorResponse('NOT_FOUND', `Listing with ID '${listingId}' not found`, 404);
+  }
+  if (!canModifyListing(listing.landlordId, getActor(event))) {
+    return errorResponse('FORBIDDEN', 'You are not allowed to upload media for this listing', 403);
   }
   if (!fileName || typeof fileName !== 'string') {
     return errorResponse('VALIDATION_ERROR', 'fileName is required', 400);
