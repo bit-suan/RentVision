@@ -1,5 +1,6 @@
 import { Link } from "@/i18n/routing";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import Spinner from "./Spinner";
 
 type ButtonVariant = "primary" | "secondary" | "quiet";
 
@@ -7,6 +8,7 @@ interface ButtonStyleProps {
   children: ReactNode;
   variant?: ButtonVariant;
   className?: string;
+  isLoading?: boolean;
 }
 
 type NativeButtonProps = Omit<
@@ -20,13 +22,30 @@ type ButtonProps = ButtonStyleProps &
     | (NativeButtonProps & { href?: never })
   );
 
-function buttonClassName(variant: ButtonVariant, className?: string) {
-  return ["button", `button--${variant}`, className].filter(Boolean).join(" ");
+function buttonClassName(
+  variant: ButtonVariant,
+  className?: string,
+  isLoading?: boolean
+) {
+  return [
+    "button",
+    `button--${variant}`,
+    isLoading && "button--loading",
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 export default function Button(props: ButtonProps) {
-  const { children, variant = "primary", className, ...rest } = props;
-  const classes = buttonClassName(variant, className);
+  const {
+    children,
+    variant = "primary",
+    className,
+    isLoading = false,
+    ...rest
+  } = props;
+  const classes = buttonClassName(variant, className, isLoading);
 
   if ("href" in rest && typeof rest.href === "string") {
     return (
@@ -42,8 +61,13 @@ export default function Button(props: ButtonProps) {
   }
 
   return (
-    <button className={classes} {...(rest as NativeButtonProps)}>
-      {children}
+    <button
+      className={classes}
+      disabled={isLoading || (rest as NativeButtonProps).disabled}
+      {...(rest as NativeButtonProps)}
+    >
+      {isLoading && <Spinner className="button-spinner" />}
+      <span className={isLoading ? "button-text--hidden" : ""}>{children}</span>
     </button>
   );
 }

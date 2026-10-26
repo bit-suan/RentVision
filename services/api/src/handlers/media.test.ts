@@ -2,6 +2,8 @@ process.env.DATA_STORE = 'memory';
 
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { handler } from './media';
+import { resetMemoryStore } from '../data';
+import { loadDemoListings } from '../data/seed';
 
 function event(
   method: string,
@@ -14,7 +16,7 @@ function event(
     path,
     queryStringParameters: query ?? null,
     body: body ? JSON.stringify(body) : null,
-    headers: {},
+    headers: { 'x-user-id': 'landlord-hana' },
     pathParameters: null,
     resource: path,
     isBase64Encoded: false,
@@ -22,6 +24,11 @@ function event(
 }
 
 describe('media handler', () => {
+  beforeEach(() => {
+    resetMemoryStore();
+    loadDemoListings();
+  });
+
   test('creates a local upload URL for a panorama', async () => {
     const result = await handler(
       event('POST', '/media/upload-url', undefined, {

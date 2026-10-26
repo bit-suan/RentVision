@@ -1,10 +1,12 @@
 import * as cdk from 'aws-cdk-lib';
 import * as apigatewayv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import * as apigatewayv2Integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
+import * as apigatewayv2Authorizers from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdaNodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
@@ -26,6 +28,10 @@ export interface RentVisionApiProps {
   readonly mediaBucket: s3.Bucket;
   /** S3 lease documents bucket. */
   readonly leaseDocsBucket: s3.Bucket;
+  /** Cognito user pool. */
+  readonly userPool: cognito.UserPool;
+  /** Cognito user pool client. */
+  readonly userPoolClient: cognito.UserPoolClient;
   /** Name of the geospatial GSI on the properties table. */
   readonly geoIndexName: string;
   /** Name of the status GSI on the properties table. */
@@ -43,7 +49,7 @@ export interface RentVisionApiProps {
  * for the RentVision backend.
  *
  * Architecture:
- *   - HTTP API (API Gateway v2) with CORS
+ *   - HTTP API (API Gateway v2) with CORS and JWT Authorizer
  *   - Lambda functions for listings, media, and leases
  *   - Each Lambda has a least-privilege IAM role
  *   - CloudWatch log groups with 14-day retention
@@ -54,12 +60,16 @@ export interface RentVisionApiProps {
 export class RentVisionApi extends Construct {
   /** The HTTP API Gateway. */
   public readonly httpApi: apigatewayv2.HttpApi;
+  /** The Cognito JWT Authorizer. */
+  public readonly authorizer: apigatewayv2Authorizers.HttpJwtAuthorizer;
   /** Lambda function for listings CRUD and geospatial search. */
   public readonly listingsHandler: lambdaNodejs.NodejsFunction;
   /** Lambda function for media presigned URL generation. */
   public readonly mediaHandler: lambdaNodejs.NodejsFunction;
   /** Lambda function for lease management and AI Q&A. */
   public readonly leaseHandler: lambdaNodejs.NodejsFunction;
+  /** Lambda function for health check. */
+  public readonly healthHandler: lambdaNodejs.NodejsFunction;
 
   constructor(scope: Construct, id: string, props: RentVisionApiProps) {
     super(scope, id);
@@ -81,10 +91,30 @@ export class RentVisionApi extends Construct {
         minify: true,
         sourceMap: true,
         target: 'es2022',
-        // Externals that should not be bundled
-        externalModules: [],
+        // Fix for bundling handlers outside the CDK root
+        nodeModules: ['uuid'], // Example of forcing inclusion if needed
       },
+      // Specify the project root to include the services/api directory
+      projectRoot: path.join(__dirname, '..', '..', '..', 'services', 'api'),
+      depsLockFilePath: path.join(__dirname, '..', '..', '..', 'services', 'api', 'package-lock.json'),
     };
+
+    // -------------------------------------------------------------------------
+    // Lambda: Health Handler
+    // -------------------------------------------------------------------------
+    this.healthHandler = new lambdaNodejs.NodejsFunction(this, 'HealthHandler', {
+      ...lambdaDefaults,
+      functionName: `rentvision-health-${props.environment}`,
+      description: 'Public health check endpoint',
+      entry: path.join(handlersPath, 'health.ts'),
+      handler: 'handler',
+    });
+
+    new logs.LogGroup(this, 'HealthHandlerLogs', {
+      logGroupName: `/aws/lambda/rentvision-health-${props.environment}`,
+      retention: logs.RetentionDays.TWO_WEEKS,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
 
     // -------------------------------------------------------------------------
     // Lambda: Listings Handler
@@ -165,6 +195,14 @@ export class RentVisionApi extends Construct {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
+    this.healthHandler = new lambdaNodejs.NodejsFunction(this, 'HealthHandler', {
+      ...lambdaDefaults,
+      functionName: `rentvision-health-${props.environment}`,
+      description: 'Returns API health status',
+      entry: path.join(handlersPath, 'health.ts'),
+      handler: 'handler',
+    });
+
     // -------------------------------------------------------------------------
     // HTTP API Gateway
     // -------------------------------------------------------------------------
@@ -177,6 +215,7 @@ export class RentVisionApi extends Construct {
           apigatewayv2.CorsHttpMethod.GET,
           apigatewayv2.CorsHttpMethod.POST,
           apigatewayv2.CorsHttpMethod.PUT,
+          apigatewayv2.CorsHttpMethod.PATCH,
           apigatewayv2.CorsHttpMethod.DELETE,
           apigatewayv2.CorsHttpMethod.OPTIONS,
         ],
@@ -192,7 +231,17 @@ export class RentVisionApi extends Construct {
       },
     });
 
+    // Cognito JWT Authorizer
+    this.authorizer = new apigatewayv2Authorizers.HttpJwtAuthorizer('JwtAuthorizer', props.userPool.userPoolProviderUrl, {
+      jwtAudience: [props.userPoolClient.userPoolClientId],
+      authorizerName: `rentvision-jwt-authorizer-${props.environment}`,
+    });
+
     // Lambda integrations
+    const healthIntegration = new apigatewayv2Integrations.HttpLambdaIntegration(
+      'HealthIntegration',
+      this.healthHandler,
+    );
     const listingsIntegration = new apigatewayv2Integrations.HttpLambdaIntegration(
       'ListingsIntegration',
       this.listingsHandler,
@@ -210,6 +259,13 @@ export class RentVisionApi extends Construct {
     // API Routes
     // -------------------------------------------------------------------------
 
+    // Health route (Public)
+    this.httpApi.addRoutes({
+      path: '/health',
+      methods: [apigatewayv2.HttpMethod.GET],
+      integration: healthIntegration,
+    });
+
     // Listings routes
     this.httpApi.addRoutes({
       path: '/listings',
@@ -217,10 +273,22 @@ export class RentVisionApi extends Construct {
       integration: listingsIntegration,
     });
 
+    const healthIntegration = new apigatewayv2Integrations.HttpLambdaIntegration(
+      'HealthIntegration',
+      this.healthHandler,
+    );
+
+    this.httpApi.addRoutes({
+      path: '/health',
+      methods: [apigatewayv2.HttpMethod.GET],
+      integration: healthIntegration,
+    });
+
     this.httpApi.addRoutes({
       path: '/listings',
       methods: [apigatewayv2.HttpMethod.POST],
       integration: listingsIntegration,
+      authorizer: this.authorizer,
     });
 
     this.httpApi.addRoutes({
@@ -230,8 +298,41 @@ export class RentVisionApi extends Construct {
     });
 
     this.httpApi.addRoutes({
+      path: '/listings/{id}',
+      methods: [apigatewayv2.HttpMethod.PUT],
+      integration: listingsIntegration,
+      authorizer: this.authorizer,
+    });
+
+    this.httpApi.addRoutes({
+      path: '/listings/{id}/status',
+      methods: [apigatewayv2.HttpMethod.PATCH],
+      integration: listingsIntegration,
+      authorizer: this.authorizer,
+    });
+
+    this.httpApi.addRoutes({
+      path: '/listings/{id}/images',
+      methods: [apigatewayv2.HttpMethod.POST],
+      integration: listingsIntegration,
+      authorizer: this.authorizer,
+    });
+
+    this.httpApi.addRoutes({
       path: '/listings/search',
       methods: [apigatewayv2.HttpMethod.GET],
+      integration: listingsIntegration,
+    });
+
+    this.httpApi.addRoutes({
+      path: '/listings/{id}/status',
+      methods: [apigatewayv2.HttpMethod.PATCH],
+      integration: listingsIntegration,
+    });
+
+    this.httpApi.addRoutes({
+      path: '/listings/{id}/images',
+      methods: [apigatewayv2.HttpMethod.POST],
       integration: listingsIntegration,
     });
 
@@ -240,12 +341,14 @@ export class RentVisionApi extends Construct {
       path: '/media/upload-url',
       methods: [apigatewayv2.HttpMethod.POST],
       integration: mediaIntegration,
+      authorizer: this.authorizer,
     });
 
     this.httpApi.addRoutes({
       path: '/media/download-url',
       methods: [apigatewayv2.HttpMethod.GET],
       integration: mediaIntegration,
+      authorizer: this.authorizer,
     });
 
     // Lease routes
@@ -253,18 +356,21 @@ export class RentVisionApi extends Construct {
       path: '/leases/upload-url',
       methods: [apigatewayv2.HttpMethod.POST],
       integration: leaseIntegration,
+      authorizer: this.authorizer,
     });
 
     this.httpApi.addRoutes({
       path: '/leases/{id}',
       methods: [apigatewayv2.HttpMethod.GET],
       integration: leaseIntegration,
+      authorizer: this.authorizer,
     });
 
     this.httpApi.addRoutes({
       path: '/leases/{id}/qa',
       methods: [apigatewayv2.HttpMethod.POST],
       integration: leaseIntegration,
+      authorizer: this.authorizer,
     });
 
     // -------------------------------------------------------------------------
