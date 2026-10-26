@@ -5,4 +5,3 @@ export const instant = false;
 export default function RootPage() {
   redirect("/en");
 }
-

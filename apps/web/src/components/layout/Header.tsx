@@ -1,6 +1,7 @@
 import { Link } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
 import LanguageSwitcher from "./LanguageSwitcher";
+import UserMenu from "./UserMenu";
 
 export default function Header() {
   const t = useTranslations("Header");
@@ -25,9 +26,7 @@ export default function Header() {
           <Link href="/map">
             {t("map")}
           </Link>
-          <Link href="/login">
-            {t("login")}
-          </Link>
+          <UserMenu />
           <LanguageSwitcher />
         </nav>
       </div>

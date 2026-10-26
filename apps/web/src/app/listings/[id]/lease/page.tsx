@@ -1,7 +1,5 @@
 import { redirect } from "next/navigation";
 
-export const instant = false;
-
 const DEMO_IDS = [
   "listing-bole-loft",
   "listing-kazanchis-studio",

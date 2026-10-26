@@ -53,28 +53,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    let isSubscribed = true;
-    getCurrentUser()
-      .then((currentUser) => {
-        if (isSubscribed) {
-          setUser(currentUser);
-        }
-      })
-      .catch(() => {
-        if (isSubscribed) {
-          setUser(null);
-        }
-      })
-      .finally(() => {
-        if (isSubscribed) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      isSubscribed = false;
-    };
-  }, []);
+    (async () => {
+      await checkUser();
+    })();
+  }, [checkUser]);
 
   const signIn = async (input: SignInInput) => {
     await amplifySignIn(input);

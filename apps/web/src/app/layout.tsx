@@ -1,10 +1,16 @@
+import type { Metadata } from "next";
 import { AuthProvider } from "@/lib/AuthContext";
-import "./globals.css";
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <AuthProvider>{children}</AuthProvider>;
+  return (
+    <html lang="en">
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
+    </html>
+  );
 }

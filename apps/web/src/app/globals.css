@@ -13,6 +13,13 @@
   --shadow-card: 0 12px 32px rgb(23 43 42 / 7%);
   --radius-card: 16px;
   --content-width: 1280px;
+
+  /* Legacy alias vars used in auth/shell components */
+  --card: #ffffff;
+  --line: #dce6e3;
+  --green: #066653;
+  --danger: #a63232;
+  --muted: #60716f;
 }
 
 * {
@@ -1925,6 +1932,30 @@ html:has(.landing-page) {
   font-weight: 600;
 }
 
+.auth-error {
+  padding: 10px 14px;
+  border-radius: 8px;
+  color: var(--danger);
+  background: #fde8e7;
+  border: 1px solid #efc7c4;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.auth-link-quiet {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  text-align: center;
+  justify-content: center;
+}
+
+.auth-link-quiet:hover {
+  color: var(--color-primary-dark);
+}
+
 .user-menu {
   display: flex;
   align-items: center;
@@ -1972,27 +2003,8 @@ html:has(.landing-page) {
   visibility: hidden;
 }
 
-.form-field {
-  display: grid;
-  gap: 6px;
-}
-
-.form-field span {
-  font-size: 0.92rem;
-  font-weight: 600;
-  color: var(--color-ink);
-}
-
-.form-field__control {
-  padding: 10px 14px;
-  border: 1px solid var(--color-border);
-  border-radius: 9px;
-  background: white;
-  width: 100%;
-  color: var(--color-ink);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
+/* Note: .form-field and .form-field__control are defined above (lines ~981-1016).
+   These override with auth-specific focus ring using legacy --green variable. */
 .form-field__control:focus {
   outline: none;
   border-color: var(--color-primary);

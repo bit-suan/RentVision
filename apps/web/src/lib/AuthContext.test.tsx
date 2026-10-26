@@ -1,6 +1,8 @@
+
+import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import { AuthProvider, useAuth } from "./AuthContext";
-import { getCurrentUser } from "aws-amplify/auth";
+import * as amplifyAuth from "aws-amplify/auth";
 
 // Mock Amplify
 jest.mock("aws-amplify/auth", () => ({
@@ -32,7 +34,7 @@ const TestComponent = () => {
 
 describe("AuthContext", () => {
   it("restores session on mount", async () => {
-    (getCurrentUser as jest.Mock).mockResolvedValue({ userId: "test-user", username: "test-user" });
+    (amplifyAuth.getCurrentUser as jest.Mock).mockResolvedValue({ userId: "test-user", username: "test-user" });
 
     render(
       <AuthProvider>
@@ -49,7 +51,7 @@ describe("AuthContext", () => {
   });
 
   it("handles unauthenticated state", async () => {
-    (getCurrentUser as jest.Mock).mockRejectedValue(new Error("No user"));
+    (amplifyAuth.getCurrentUser as jest.Mock).mockRejectedValue(new Error("No user"));
 
     render(
       <AuthProvider>

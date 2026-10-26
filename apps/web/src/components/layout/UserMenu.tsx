@@ -12,9 +12,11 @@ export default function UserMenu() {
   }
 
   if (isAuthenticated) {
+    // user.username is the Cognito username (email for email-based pools)
+    const displayName = user?.username ?? user?.userId ?? "Account";
     return (
       <div className="user-menu">
-        <span className="user-email">{user?.userId}</span>
+        <span className="user-email">{displayName}</span>
         <Button variant="quiet" onClick={() => signOut()}>
           Sign Out
         </Button>
@@ -24,10 +26,10 @@ export default function UserMenu() {
 
   return (
     <div className="user-menu">
-      <Link href="/login" className="button secondary">
+      <Link href="/login" className="button button--secondary">
         Log In
       </Link>
-      <Link href="/signup" className="button">
+      <Link href="/signup" className="button button--primary">
         Sign Up
       </Link>
     </div>
