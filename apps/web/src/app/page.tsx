@@ -1,5 +1,8 @@
-import { MapExplorer } from "@/components/MapExplorer";
+import { redirect } from "next/navigation";
 
-export default function Home() {
-  return <MapExplorer />;
+export const instant = false;
+
+export default function RootPage() {
+  redirect("/en");
 }
+

@@ -1,0 +1,184 @@
+{
+  "Header": {
+    "home": "Home",
+    "properties": "Properties",
+    "map": "Map",
+    "login": "Login",
+    "brandAria": "RentVision home",
+    "navAria": "Main navigation"
+  },
+  "Footer": {
+    "tagline": "Find a place you can trust.",
+    "home": "Home",
+    "properties": "Properties",
+    "map": "Map",
+    "contact": "Contact",
+    "phone": "+251 XX XXX XXXX",
+    "email": "hello@rentvision.com",
+    "location": "Addis Ababa, Ethiopia",
+    "copyright": "© 2026 RentVision. All rights reserved.",
+    "legacyCopyright": "Copyright 2026 RentVision. All rights reserved.",
+    "navAria": "Footer navigation",
+    "contactAria": "Contact"
+  },
+  "LanguageSwitcher": {
+    "label": "Language",
+    "english": "English",
+    "amharic": "አማርኛ",
+    "shortEn": "EN",
+    "shortAm": "አማ",
+    "switchToEn": "Switch to English",
+    "switchToAm": "ወደ አማርኛ ቀይር"
+  },
+  "Landing": {
+    "title": "RentVision",
+    "tagline": "Find a place you can trust.",
+    "description": "Discover rental properties with location-aware search, verified listings, and AI-powered lease insights.",
+    "exploreProperties": "Explore properties",
+    "searchOnMap": "Search on map",
+    "heroAlt": "Modern home with warm lighting and landscaped garden",
+    "whyRentVision": "Why RentVision?",
+    "features": {
+      "discover": {
+        "title": "Discover",
+        "description": "Search properties",
+        "alt": "Warm, naturally lit bedroom with a neatly made bed"
+      },
+      "trust": {
+        "title": "Trust",
+        "description": "Duplicate detection",
+        "alt": "Modern bathroom with shower, vanity, and mirror"
+      },
+      "understand": {
+        "title": "Understand",
+        "description": "AI lease insights",
+        "alt": "Warm, naturally lit living room with a sofa"
+      }
+    }
+  },
+  "Properties": {
+    "eyebrow": "Property discovery",
+    "title": "Discover rental properties",
+    "description": "Explore rental homes across Addis Ababa. Search by location, compare prices, and narrow the results to find a place that fits your needs.",
+    "heading": "Rental properties",
+    "count_one": "{count} property",
+    "count_other": "{count} properties",
+    "loading": "Loading property results"
+  },
+  "SearchControls": {
+    "queryLabel": "Search by keyword or location",
+    "queryPlaceholder": "Try Bole or apartment",
+    "search": "Search",
+    "filterLegend": "Filter properties",
+    "locationLabel": "Location",
+    "anyLocation": "Any location",
+    "minPriceLabel": "Minimum price (ETB/month)",
+    "maxPriceLabel": "Maximum price (ETB/month)",
+    "bedroomsLabel": "Bedrooms",
+    "anyBedrooms": "Any bedrooms",
+    "bedroomsOption": "{count}+ bedrooms",
+    "propertyTypeLabel": "Property type",
+    "anyPropertyType": "Any type",
+    "availabilityLabel": "Availability",
+    "anyAvailability": "Any availability",
+    "sortLabel": "Sort by price",
+    "sortRecommended": "Recommended",
+    "sortPriceAsc": "Price: low to high",
+    "sortPriceDesc": "Price: high to low",
+    "clearFilters": "Clear filters"
+  },
+  "PropertyCard": {
+    "viewProperty": "View property",
+    "bedroomsAndBathrooms": "{bedrooms} bedrooms · {bathrooms} bathrooms",
+    "pricePerMonth": "{price} ETB / month",
+    "beds": "{count} beds",
+    "baths": "{count} baths",
+    "generator": "Generator",
+    "waterTank": "Water Tank",
+    "wifi": "WiFi",
+    "parking": "Parking",
+    "balcony": "Balcony"
+  },
+  "PropertyDetail": {
+    "breadcrumb": "Properties",
+    "breadcrumbAria": "Breadcrumb",
+    "bedrooms": "Bedrooms",
+    "bathrooms": "Bathrooms",
+    "virtualTourHeading": "360° virtual tour",
+    "leaseHeading": "Questions about the lease?",
+    "leaseDescription": "Lease questions will be available in the renter portal. This property is included as context for the future Q&A flow.",
+    "askAboutLease": "Ask about the lease",
+    "unableToLoad": "Unable to load listing",
+    "openTour": "Open 360° tour",
+    "askTheLease": "Ask the lease",
+    "perMonth": "{price} {currency} / month",
+    "loading": "Loading property details"
+  },
+  "PropertyGallery": {
+    "galleryAria": "Property image gallery",
+    "heading": "Photos",
+    "noPhotosTitle": "No photos available",
+    "noPhotosMessage": "Photos for this property have not been added yet.",
+    "mainPhoto": "main photo",
+    "photoNumber": "photo {number}"
+  },
+  "PropertyTrust": {
+    "heading": "Trust information",
+    "noInfo": "No trust information is available for this listing."
+  },
+  "PropertyAmenities": {
+    "heading": "Amenities",
+    "noAmenitiesTitle": "No amenities listed",
+    "noAmenitiesMessage": "Amenity details have not been added for this property."
+  },
+  "PropertyLocation": {
+    "heading": "Location",
+    "mapPreviewAvailable": "A map preview will be available in the map integration phase.",
+    "mapPreviewUnavailable": "Map preview is unavailable because this listing does not include geographic coordinates yet."
+  },
+  "Panorama": {
+    "defaultAria": "Interactive 360-degree property view",
+    "loading": "Loading 360-degree view",
+    "unavailable": "A 360-degree view is not available for this property yet. The property photo gallery is still available above.",
+    "error": "The 360-degree view could not be loaded. The property photo gallery is still available above."
+  },
+  "States": {
+    "resultsAria": "Property results",
+    "noPropertiesTitle": "No properties found",
+    "noPropertiesMessage": "Try changing your search or filters to see more rental options.",
+    "somethingWentWrong": "Something went wrong",
+    "notFoundTitle": "Property not found",
+    "notFoundMessage": "The requested property listing could not be found.",
+    "backToProperties": "Back to properties"
+  },
+  "Availability": {
+    "AVAILABLE": "Available",
+    "COMING_SOON": "Coming Soon",
+    "OCCUPIED": "Occupied"
+  },
+  "PropertyTypes": {
+    "Apartment": "Apartment",
+    "Villa": "Villa"
+  },
+  "TrustStatus": {
+    "Verification pending": "Verification pending",
+    "Verified": "Verified"
+  },
+  "Tour": {
+    "backToListing": "Back to listing",
+    "title": "Virtual inspection",
+    "description": "Click the hotspots to walk between rooms. This uses equirectangular 360° scenes.",
+    "loading": "Loading tour..."
+  },
+  "Lease": {
+    "backToListing": "Back to listing",
+    "title": "Lease Q&A",
+    "description": "Ask about rent, deposit, notice period, or utilities. The API forwards the question to the Python extraction service.",
+    "defaultQuestion": "What is the monthly rent and when is it due?",
+    "ask": "Ask",
+    "readingLease": "Reading lease...",
+    "confidence": "Confidence {confidence}%",
+    "pageNumber": " · page {page}",
+    "qaFailed": "Q&A failed"
+  }
+}

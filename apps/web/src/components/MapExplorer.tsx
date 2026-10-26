@@ -28,7 +28,9 @@ export function MapExplorer() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    queueMicrotask(() => {
+      if (!cancelled) setLoading(true);
+    });
     searchListings({
       lat,
       lng,

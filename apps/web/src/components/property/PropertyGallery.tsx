@@ -1,6 +1,7 @@
 import Image from "next/image";
 import EmptyState from "@/components/ui/EmptyState";
 import type { Property } from "@/lib/properties";
+import { useTranslations } from "next-intl";
 
 interface PropertyGalleryProps {
   title: string;
@@ -13,28 +14,29 @@ export default function PropertyGallery({
   imageUrl,
   galleryImages,
 }: PropertyGalleryProps) {
+  const t = useTranslations("PropertyGallery");
   const images = galleryImages.length > 0 ? galleryImages : imageUrl ? [imageUrl] : [];
 
   if (images.length === 0) {
     return (
-      <section aria-label="Property image gallery">
-        <h2>Photos</h2>
+      <section aria-label={t("galleryAria")}>
+        <h2>{t("heading")}</h2>
         <EmptyState
-          title="No photos available"
-          message="Photos for this property have not been added yet."
+          title={t("noPhotosTitle")}
+          message={t("noPhotosMessage")}
         />
       </section>
     );
   }
 
   return (
-    <section aria-label="Property image gallery">
-      <h2>Photos</h2>
+    <section aria-label={t("galleryAria")}>
+      <h2>{t("heading")}</h2>
       <div className="property-gallery">
         {images.map((src, index) => (
           <Image
             key={`${src}-${index}`}
-            alt={`${title} ${index === 0 ? "main photo" : `photo ${index + 1}`}`}
+            alt={`${title} ${index === 0 ? t("mainPhoto") : t("photoNumber", { number: index + 1 })}`}
             className={index === 0 ? "property-gallery__primary" : undefined}
             height={index === 0 ? 900 : 450}
             priority={index === 0}

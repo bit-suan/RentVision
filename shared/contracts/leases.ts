@@ -20,11 +20,14 @@ export interface LeaseChunkDto {
   char_end: number;
 }
 
+import type { SupportedLocale } from './locale';
+
 export interface LeaseQARequestDto {
   question: string;
   pdf_base64?: string | null;
   document_text?: string | null;
   top_k?: number;
+  locale?: SupportedLocale;
 }
 
 export interface LeaseQAResponseDto {
@@ -35,4 +38,5 @@ export interface LeaseQAResponseDto {
   retrieved_passages_count: number;
   has_sufficient_evidence: boolean;
   confidence_notes: string | null;
+  response_language?: SupportedLocale;
 }

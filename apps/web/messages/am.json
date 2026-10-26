@@ -1,0 +1,184 @@
+{
+  "Header": {
+    "home": "መነሻ",
+    "properties": "ንብረቶች",
+    "map": "ካርታ",
+    "login": "ግባ",
+    "brandAria": "ሬንትቪዥን መነሻ",
+    "navAria": "ዋና አሰሳ"
+  },
+  "Footer": {
+    "tagline": "የሚተማመኑበትን የመኖሪያ ቦታ ያግኙ።",
+    "home": "መነሻ",
+    "properties": "ንብረቶች",
+    "map": "ካርታ",
+    "contact": "አድራሻ",
+    "phone": "+251 XX XXX XXXX",
+    "email": "hello@rentvision.com",
+    "location": "አዲስ አበባ፣ ኢትዮጵያ",
+    "copyright": "© 2026 ሬንትቪዥን። መብቱ በሕግ የተጠበቀ ነው።",
+    "legacyCopyright": "የቅጂ መብት 2026 ሬንትቪዥን። መብቱ በሕግ የተጠበቀ ነው።",
+    "navAria": "የግርጌ አሰሳ",
+    "contactAria": "አድራሻ"
+  },
+  "LanguageSwitcher": {
+    "label": "ቋንቋ",
+    "english": "English",
+    "amharic": "አማርኛ",
+    "shortEn": "EN",
+    "shortAm": "አማ",
+    "switchToEn": "Switch to English",
+    "switchToAm": "ወደ አማርኛ ቀይር"
+  },
+  "Landing": {
+    "title": "ሬንትቪዥን",
+    "tagline": "የሚተማመኑበትን የመኖሪያ ቦታ ያግኙ።",
+    "description": "በአካባቢ ላይ በተመሠረተ ፍለጋ፣ በተረጋገጡ ዝርዝሮች እና በአይ-አይ የኪራይ ውል ትንተና አማካኝነት የኪራይ ቤቶችን ያግኙ።",
+    "exploreProperties": "ንብረቶችን ያስሱ",
+    "searchOnMap": "በካርታ ላይ ይፈልጉ",
+    "heroAlt": "ዘመናዊ ቤት ከውብ መብራት እና አትክልት ስፍራ ጋር",
+    "whyRentVision": "ለምን ሬንትቪዥን?",
+    "features": {
+      "discover": {
+        "title": "ያግኙ",
+        "description": "የኪራይ ቤቶችን ይፈልጉ",
+        "alt": "በተፈጥሮ ብርሃን የተሞላ ምቹ መኝታ ቤት"
+      },
+      "trust": {
+        "title": "እምነት",
+        "description": "ተደጋጋሚ ዝርዝሮችን መለየት",
+        "alt": "ዘመናዊ መታጠቢያ ቤት ከመስታወት ጋር"
+      },
+      "understand": {
+        "title": "መረዳት",
+        "description": "የአይ-አይ የውል ግንዛቤዎች",
+        "alt": "ምቹ ሳሎን ከሶፋ ጋር"
+      }
+    }
+  },
+  "Properties": {
+    "eyebrow": "የኪራይ ቤቶች ፍለጋ",
+    "title": "የኪራይ ቤቶችን ያስሱ",
+    "description": "በመላው አዲስ አበባ ያሉ የኪራይ ቤቶችን ያስሱ። በአካባቢ ይፈልጉ፣ ዋጋዎችን ያወዳድሩ እና ፍላጎትዎትን የሚያሟላ ቦታ ያግኙ።",
+    "heading": "የሚከራዩ ቤቶች",
+    "count_one": "{count} ንብረት",
+    "count_other": "{count} ንብረቶች",
+    "loading": "የንብረት ውጤቶች በመጫን ላይ ናቸው"
+  },
+  "SearchControls": {
+    "queryLabel": "በቁልፍ ቃል ወይም በአካባቢ ይፈልጉ",
+    "queryPlaceholder": "ለምሳሌ ቦሌ ወይም አፓርታማ",
+    "search": "ፈልግ",
+    "filterLegend": "ንብረቶችን ያጣሩ",
+    "locationLabel": "አካባቢ",
+    "anyLocation": "ማንኛውም አካባቢ",
+    "minPriceLabel": "ዝቅተኛ ዋጋ (ብር/በወር)",
+    "maxPriceLabel": "ከፍተኛ ዋጋ (ብር/በወር)",
+    "bedroomsLabel": "መኝታ ክፍሎች",
+    "anyBedrooms": "ማንኛውም መኝታ ቤት",
+    "bedroomsOption": "{count}+ መኝታ ቤቶች",
+    "propertyTypeLabel": "የንብረት አይነት",
+    "anyPropertyType": "ማንኛውም አይነት",
+    "availabilityLabel": "ተገኝነት",
+    "anyAvailability": "ማንኛውም ተገኝነት",
+    "sortLabel": "በዋጋ ቅደም ተከተል",
+    "sortRecommended": "የተመረጡት",
+    "sortPriceAsc": "ዋጋ፡ ከዝቅተኛ ወደ ከፍተኛ",
+    "sortPriceDesc": "ዋጋ፡ ከከፍተኛ ወደ ዝቅተኛ",
+    "clearFilters": "ማጣሪያዎችን አጽዳ"
+  },
+  "PropertyCard": {
+    "viewProperty": "ዝርዝሩን ይመልከቱ",
+    "bedroomsAndBathrooms": "{bedrooms} መኝታ · {bathrooms} መታጠቢያ",
+    "pricePerMonth": "{price} ብር / በወር",
+    "beds": "{count} መኝታ",
+    "baths": "{count} መታጠቢያ",
+    "generator": "ጄነሬተር",
+    "waterTank": "የውሃ ታንከር",
+    "wifi": "ዋይፋይ",
+    "parking": "ፓርኪንግ",
+    "balcony": "በረንዳ"
+  },
+  "PropertyDetail": {
+    "breadcrumb": "ንብረቶች",
+    "breadcrumbAria": "የአሰሳ ቅደም ተከተል",
+    "bedrooms": "መኝታ ክፍሎች",
+    "bathrooms": "መታጠቢያ ክፍሎች",
+    "virtualTourHeading": "360° ምናባዊ ጉብኝት",
+    "leaseHeading": "ስለ ውሉ ጥያቄ አለዎት?",
+    "leaseDescription": "የውል ጥያቄዎች በተከራይ ፖርታል ውስጥ ይገኛሉ። ይህ ንብረት ለወደፊቱ የጥያቄና መልስ ፍሰት እንደ አውድ ተካቷል።",
+    "askAboutLease": "ስለ ውሉ ይጠይቁ",
+    "loading": "የንብረት ዝርዝር በመጫን ላይ ነው",
+    "unableToLoad": "ዝርዝሩን መጫን አልተቻለም",
+    "openTour": "የ360° ጉብኝት ይክፈቱ",
+    "askTheLease": "ውሉን ይጠይቁ",
+    "perMonth": "{price} {currency} / month"
+  },
+  "PropertyGallery": {
+    "galleryAria": "የንብረት ፎቶ ማሳያ",
+    "heading": "ፎቶዎች",
+    "noPhotosTitle": "ምንም ፎቶዎች አልተገኙም",
+    "noPhotosMessage": "ለዚህ ንብረት ፎቶዎች እስካሁን አልተጨመሩም።",
+    "mainPhoto": "ዋና ፎቶ",
+    "photoNumber": "ፎቶ {number}"
+  },
+  "PropertyTrust": {
+    "heading": "የደህንነት እና እምነት መረጃ",
+    "noInfo": "ለዚህ ዝርዝር ምንም የእምነት መረጃ አልተገኘም።"
+  },
+  "PropertyAmenities": {
+    "heading": "አገልግሎቶች እና መገልገያዎች",
+    "noAmenitiesTitle": "ምንም መገልገያ አልተጠቀሰም",
+    "noAmenitiesMessage": "ለዚህ ንብረት የመገልገያ ዝርዝሮች እስካሁን አልተጨመሩም።"
+  },
+  "PropertyLocation": {
+    "heading": "አካባቢ",
+    "mapPreviewAvailable": "በካርታ ማቀናጀት ምዕራፍ ላይ የካርታ ቅድመ እይታ ይቀርባል።",
+    "mapPreviewUnavailable": "ይህ ዝርዝር የካርታ መጋጠሚያዎች ስለሌሉት የካርታ ቅድመ እይታ አይገኝም።"
+  },
+  "Panorama": {
+    "defaultAria": "የ360 ዲግሪ ምናባዊ እይታ",
+    "loading": "360° እይታ በመጫን ላይ ነው",
+    "unavailable": "ለዚህ ንብረት 360° እይታ እስካሁን አልተዘጋጀም። የፎቶ ማሳያው ከላይ ይገኛል።",
+    "error": "360° እይታውን መጫን አልተቻለም። የፎቶ ማሳያው ከላይ ይገኛል።"
+  },
+  "States": {
+    "resultsAria": "የንብረት ውጤቶች",
+    "noPropertiesTitle": "ምንም ንብረት አልተገኘም",
+    "noPropertiesMessage": "ተጨማሪ የኪራይ አማራጮችን ለማየት ፍለጋዎን ወይም ማጣሪያዎችን ይቀይሩ።",
+    "somethingWentWrong": "ስህተት ተከስቷል",
+    "notFoundTitle": "ንብረቱ አልተገኘም",
+    "notFoundMessage": "የተጠየቀው የንብረት ዝርዝር ሊገኝ አልቻለም።",
+    "backToProperties": "ወደ ንብረቶች ይመለሱ"
+  },
+  "Availability": {
+    "AVAILABLE": "ይገኛል",
+    "COMING_SOON": "በቅርቡ ይገኛል",
+    "OCCUPIED": "ተይዟል"
+  },
+  "PropertyTypes": {
+    "Apartment": "አፓርታማ",
+    "Villa": "ቪላ"
+  },
+  "TrustStatus": {
+    "Verification pending": "ማረጋገጫ በመጠባበቅ ላይ",
+    "Verified": "የተረጋገጠ"
+  },
+  "Tour": {
+    "backToListing": "ወደ ዝርዝሩ ይመለሱ",
+    "title": "ምናባዊ ፍተሻ",
+    "description": "በክፍሎች መካከል ለመዘዋወር መገናኛዎቹን ጠቅ ያድርጉ። ይህ ባለ 360° ምናባዊ እይታን ይጠቀማል።",
+    "loading": "ጉብኝቱን በመጫን ላይ..."
+  },
+  "Lease": {
+    "backToListing": "ወደ ዝርዝሩ ይመለሱ",
+    "title": "የኪራይ ውል ጥያቄ እና መልስ",
+    "description": "ስለ ኪራይ፣ ተቀማጭ፣ የማስጠንቀቂያ ጊዜ ወይም አገልግሎቶች ይጠይቁ። ስርዓቱ ጥያቄውን ለትንታኔ አገልግሎት ያስተላልፋል።",
+    "defaultQuestion": "የወር ኪራይ ስንት ነው እና መቼ መከፈል አለበት?",
+    "ask": "ጠይቅ",
+    "readingLease": "ውሉን በማንበብ ላይ...",
+    "confidence": "አስተማማኝነት {confidence}%",
+    "pageNumber": " · ገጽ {page}",
+    "qaFailed": "ጥያቄ እና መልስ አልተሳካም"
+  }
+}
