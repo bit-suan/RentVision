@@ -5,12 +5,14 @@ import "pannellum/build/pannellum.css";
 import PanoramaFallback from "@/components/panorama/PanoramaFallback";
 import Spinner from "@/components/ui/Spinner";
 import type { PropertyPanoramaConfig } from "@/lib/properties";
+import { useTranslations } from "next-intl";
 
 interface PanoramaViewerProps {
   config?: PropertyPanoramaConfig;
 }
 
 export default function PanoramaViewer({ config }: PanoramaViewerProps) {
+  const t = useTranslations("Panorama");
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Pannellum.Viewer | null>(null);
   const [hasError, setHasError] = useState(false);
@@ -37,7 +39,7 @@ export default function PanoramaViewer({ config }: PanoramaViewerProps) {
           yaw: config.initialView?.yaw,
           pitch: config.initialView?.pitch,
           hfov: config.initialView?.hfov,
-          hotSpots: config.hotspots?.map((hotspot) => ({
+          hotSpots: config.hotspots?.map((hotspot: { id: string; pitch: number; yaw: number; text?: string; type?: string; targetPanoramaId?: string }) => ({
             id: hotspot.id,
             pitch: hotspot.pitch,
             yaw: hotspot.yaw,
@@ -77,7 +79,7 @@ export default function PanoramaViewer({ config }: PanoramaViewerProps) {
 
   if (hasError) {
     return (
-      <PanoramaFallback message="The 360-degree view could not be loaded. The property photo gallery is still available above." />
+      <PanoramaFallback message={t("error")} />
     );
   }
 
@@ -85,11 +87,11 @@ export default function PanoramaViewer({ config }: PanoramaViewerProps) {
     <div className="panorama-viewer">
       {isLoading ? (
         <div className="panorama-viewer__loading">
-          <Spinner label="Loading 360-degree view" />
+          <Spinner label={t("loading")} />
         </div>
       ) : null}
       <div
-        aria-label={config.title ?? "Interactive 360-degree property view"}
+        aria-label={config.title ?? t("defaultAria")}
         className="panorama-viewer__canvas"
         ref={containerRef}
       />

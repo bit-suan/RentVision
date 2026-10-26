@@ -96,3 +96,7 @@ class LeaseQAResponse(BaseModel):
         default=None,
         description="Explanatory notes regarding missing clauses, ambiguities, or limitations."
     )
+    response_language: str | None = Field(
+        default="en",
+        description="Language of generated answer and notes ('en' or 'am')."
+    )

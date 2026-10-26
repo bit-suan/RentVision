@@ -1,8 +1,9 @@
 import type {
   APIGatewayProxyEvent,
+  APIGatewayProxyHandler,
   APIGatewayProxyResult,
 } from "aws-lambda";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "@jest/globals";
 
 import { handler as healthHandler } from "./health";
 import { handler as createHandler } from "./listings/create";
@@ -36,6 +37,14 @@ const jsonBody = (value: unknown): string => JSON.stringify(value);
 const responseBody = (response: APIGatewayProxyResult): Record<string, unknown> =>
   JSON.parse(response.body) as Record<string, unknown>;
 
+const invoke = async (
+  handlerFn: APIGatewayProxyHandler,
+  evt: APIGatewayProxyEvent,
+): Promise<APIGatewayProxyResult> => {
+  const result = await handlerFn(evt, {} as never, () => undefined);
+  return result as APIGatewayProxyResult;
+};
+
 const listingInput = {
   title: "2-bedroom near Bole",
   description: "Sunny apartment",
@@ -53,7 +62,7 @@ beforeEach(() => {
 
 describe("API handlers", () => {
   it("returns a health response", async () => {
-    const response = await healthHandler(event());
+    const response = await invoke(healthHandler, event());
     const body = responseBody(response);
 
     expect(response.statusCode).toBe(200);
@@ -62,15 +71,14 @@ describe("API handlers", () => {
   });
 
   it("creates, reads, searches, updates, moderates, and adds an image", async () => {
-    const createdResponse = await createHandler(
+    const createdResponse = await invoke(
+      createHandler,
       event({
         httpMethod: "POST",
         path: "/listings",
         headers: { "x-user-id": "owner-1" },
         body: jsonBody(listingInput),
       }),
-      {} as never,
-      () => undefined,
     );
     const created = responseBody(createdResponse);
     const listingId = created.listingId as string;
@@ -78,17 +86,17 @@ describe("API handlers", () => {
     expect(createdResponse.statusCode).toBe(201);
     expect(created.ownerId).toBe("owner-1");
 
-    const getResponse = await getHandler(
+    const getResponse = await invoke(
+      getHandler,
       event({
         path: `/listings/${listingId}`,
         pathParameters: { id: listingId },
       }),
-      {} as never,
-      () => undefined,
     );
     expect(getResponse.statusCode).toBe(200);
 
-    const searchResponse = await searchHandler(
+    const searchResponse = await invoke(
+      searchHandler,
       event({
         path: "/listings/search",
         queryStringParameters: {
@@ -97,28 +105,26 @@ describe("API handlers", () => {
           radiusKm: "5",
         },
       }),
-      {} as never,
-      () => undefined,
     );
     const search = responseBody(searchResponse);
     expect(searchResponse.statusCode).toBe(200);
     expect(search.total).toBe(1);
 
-    const updateResponse = await updateHandler(
+    const updateResponse = await invoke(
+      updateHandler,
       event({
         httpMethod: "PUT",
         pathParameters: { id: listingId },
         headers: { "x-user-id": "owner-1" },
         body: jsonBody({ price: 16000 }),
       }),
-      {} as never,
-      () => undefined,
     );
     const updated = responseBody(updateResponse);
     expect(updateResponse.statusCode).toBe(200);
     expect(updated.price).toBe(16000);
 
-    const statusResponse = await updateStatusHandler(
+    const statusResponse = await invoke(
+      updateStatusHandler,
       event({
         httpMethod: "PATCH",
         pathParameters: { id: listingId },
@@ -128,22 +134,19 @@ describe("API handlers", () => {
         },
         body: jsonBody({ status: "pending" }),
       }),
-      {} as never,
-      () => undefined,
     );
     const moderated = responseBody(statusResponse);
     expect(statusResponse.statusCode).toBe(200);
     expect(moderated.status).toBe("pending");
 
-    const imageResponse = await addImageHandler(
+    const imageResponse = await invoke(
+      addImageHandler,
       event({
         httpMethod: "POST",
         pathParameters: { id: listingId },
         headers: { "x-user-id": "owner-1" },
         body: jsonBody({ s3Key: "images/example.jpg" }),
       }),
-      {} as never,
-      () => undefined,
     );
     const imageBody = responseBody(imageResponse);
     expect(imageResponse.statusCode).toBe(201);
@@ -154,10 +157,9 @@ describe("API handlers", () => {
   });
 
   it("returns a standard validation error for a missing create body", async () => {
-    const response = await createHandler(
+    const response = await invoke(
+      createHandler,
       event({ httpMethod: "POST", path: "/listings" }),
-      {} as never,
-      () => undefined,
     );
     const body = responseBody(response);
 
@@ -171,26 +173,24 @@ describe("API handlers", () => {
   });
 
   it("rejects status changes from non-admin users", async () => {
-    const createdResponse = await createHandler(
+    const createdResponse = await invoke(
+      createHandler,
       event({
         httpMethod: "POST",
         headers: { "x-user-id": "owner-1" },
         body: jsonBody(listingInput),
       }),
-      {} as never,
-      () => undefined,
     );
     const listingId = responseBody(createdResponse).listingId as string;
 
-    const response = await updateStatusHandler(
+    const response = await invoke(
+      updateStatusHandler,
       event({
         httpMethod: "PATCH",
         pathParameters: { id: listingId },
         headers: { "x-user-id": "owner-1" },
         body: jsonBody({ status: "rejected" }),
       }),
-      {} as never,
-      () => undefined,
     );
     const body = responseBody(response);
 

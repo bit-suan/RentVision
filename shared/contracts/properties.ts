@@ -21,8 +21,11 @@ export type ExtractionStatus =
   | 'partial'
   | 'unsupported';
 
+import type { SupportedLocale } from './locale';
+
 export interface ExtractListingRequestDto {
   description: string;
+  locale?: SupportedLocale;
 }
 
 export interface ExtractedPropertyListingDto {

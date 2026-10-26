@@ -7,6 +7,14 @@ import {
   parsePropertySearchFilters,
   searchProperties,
 } from "@/lib/property-search";
+import { routing } from "@/i18n/routing";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+
+export const instant = false;
+
+export function generateStaticParams() {
+  return routing.locales.map((locale: string) => ({ locale }));
+}
 
 type PropertiesSearchParams = Record<
   string,
@@ -14,24 +22,39 @@ type PropertiesSearchParams = Record<
 >;
 
 interface PropertiesPageProps {
+  params: Promise<{ locale: string }>;
   searchParams: Promise<PropertiesSearchParams>;
 }
 
-export default function PropertiesPage({ searchParams }: PropertiesPageProps) {
+export default async function PropertiesPage({
+  params,
+  searchParams,
+}: PropertiesPageProps) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations({ locale, namespace: "Properties" });
+
   return (
     <Suspense
       fallback={
         <div className="detail-panel" role="status">
-          <Spinner label="Loading property results" />
+          <Spinner label={t("loading")} />
         </div>
       }
     >
-      <PropertyResults searchParams={searchParams} />
+      <PropertyResults params={params} searchParams={searchParams} />
     </Suspense>
   );
 }
 
-async function PropertyResults({ searchParams }: PropertiesPageProps) {
+async function PropertyResults({
+  params,
+  searchParams,
+}: PropertiesPageProps) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+
+  const t = await getTranslations({ locale, namespace: "Properties" });
   const rawParams = await searchParams;
   const filters = parsePropertySearchFilters(rawParams);
   const allProperties = getProperties();
@@ -44,12 +67,9 @@ async function PropertyResults({ searchParams }: PropertiesPageProps) {
   return (
     <div className="properties-page">
       <header className="page-intro">
-        <p className="eyebrow">Property discovery</p>
-        <h1>Discover rental properties</h1>
-        <p>
-          Explore rental homes across Addis Ababa. Search by location, compare
-          prices, and narrow the results to find a place that fits your needs.
-        </p>
+        <p className="eyebrow">{t("eyebrow")}</p>
+        <h1>{t("title")}</h1>
+        <p>{t("description")}</p>
       </header>
 
       <PropertySearchControls
@@ -61,9 +81,11 @@ async function PropertyResults({ searchParams }: PropertiesPageProps) {
 
       <section aria-live="polite" className="property-results">
         <div className="property-results__heading">
-          <h2>Rental properties</h2>
+          <h2>{t("heading")}</h2>
           <p>
-            {properties.length} {properties.length === 1 ? "property" : "properties"}
+            {t(properties.length === 1 ? "count_one" : "count_other", {
+              count: properties.length,
+            })}
           </p>
         </div>
         <PropertyGrid properties={properties} />
