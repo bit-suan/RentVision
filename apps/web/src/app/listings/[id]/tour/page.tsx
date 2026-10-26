@@ -1,25 +1,24 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import Link from "next/link";
-import { useParams } from "next/navigation";
-import { PanoramaViewer } from "@/components/PanoramaViewer";
-import { getTour } from "@/lib/tours";
+export const instant = false;
 
-export default function TourPage() {
-  const params = useParams<{ id: string }>();
-  const tour = getTour(params.id);
+const DEMO_IDS = [
+  "listing-bole-loft",
+  "listing-kazanchis-studio",
+  "listing-sarbet-villa",
+  "listing-old-airport-family",
+  "listing-cmc-condo",
+];
 
-  return (
-    <main className="page">
-      <p>
-        <Link href={`/listings/${params.id}`}>Back to listing</Link>
-      </p>
-      <h1>Virtual inspection</h1>
-      <p className="muted">
-        Click the hotspots to walk between rooms. This uses equirectangular 360°
-        scenes.
-      </p>
-      <PanoramaViewer scenes={tour.scenes} defaultSceneId={tour.defaultSceneId} />
-    </main>
-  );
+export function generateStaticParams() {
+  return DEMO_IDS.map((id) => ({ id }));
+}
+
+interface TourRedirectProps {
+  params: Promise<{ id: string }>;
+}
+
+export default async function TourRedirect({ params }: TourRedirectProps) {
+  const { id } = await params;
+  redirect(`/en/listings/${id}/tour`);
 }

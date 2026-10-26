@@ -4,6 +4,7 @@ import { APIGatewayProxyEvent } from 'aws-lambda';
 import { handler as listingsHandler } from './handlers/listings';
 import { handler as mediaHandler } from './handlers/media';
 import { handler as leasesHandler } from './handlers/leases';
+import { handler as healthHandler } from './handlers/health';
 import { getLocalObject, putLocalObject } from './data';
 import { loadDemoListings } from './data/seed';
 
@@ -101,6 +102,9 @@ function toEvent(
 }
 
 function routeHandler(pathname: string) {
+  if (pathname === '/health') {
+    return healthHandler;
+  }
   if (pathname.includes('/listings')) {
     return listingsHandler;
   }

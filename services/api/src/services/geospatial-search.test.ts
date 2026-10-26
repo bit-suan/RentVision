@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "@jest/globals";
 import type { Listing } from "../../../../shared/contracts/listings";
 import { distanceKm, searchListings } from "./geospatial-search";
 

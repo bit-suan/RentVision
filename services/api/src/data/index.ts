@@ -102,7 +102,7 @@ export async function listActiveListings(
 ): Promise<{ items: Listing[]; lastKey?: Record<string, unknown> }> {
   if (useMemoryStore()) {
     const items = Array.from(listingsMemory.values())
-      .filter((item) => item.status === ListingStatus.ACTIVE)
+      .filter((item) => item.status === ListingStatus.APPROVED)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     const start = exclusiveStartKey?.offset
       ? Number(exclusiveStartKey.offset)
@@ -120,9 +120,9 @@ export async function listActiveListings(
     new QueryCommand({
       TableName: PROPERTIES_TABLE,
       IndexName: STATUS_INDEX_NAME,
-      KeyConditionExpression: '#status = :active',
+      KeyConditionExpression: '#status = :approved',
       ExpressionAttributeNames: { '#status': 'status' },
-      ExpressionAttributeValues: { ':active': ListingStatus.ACTIVE },
+      ExpressionAttributeValues: { ':approved': ListingStatus.APPROVED },
       ScanIndexForward: false,
       Limit: limit,
       ExclusiveStartKey: exclusiveStartKey,

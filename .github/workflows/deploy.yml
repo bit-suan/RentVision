@@ -55,7 +55,12 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: infra/package-lock.json
+          cache-dependency-path: |
+            infra/package-lock.json
+            services/api/package-lock.json
+
+      - name: Install API Dependencies for Lambda Bundling
+        run: npm ci --prefix ../services/api
 
       - name: Install Infrastructure Dependencies
         run: npm ci
