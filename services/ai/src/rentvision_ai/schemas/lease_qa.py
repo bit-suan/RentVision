@@ -53,6 +53,10 @@ class LeaseQARequest(BaseModel):
         le=10,
         description="Number of most relevant evidence chunks to retrieve."
     )
+    locale: str | None = Field(
+        default=None,
+        description="Optional preferred language ('en' or 'am').",
+    )
 
     @field_validator("question")
     @classmethod
@@ -99,4 +103,8 @@ class LeaseQAResponse(BaseModel):
     response_language: str | None = Field(
         default="en",
         description="Language of generated answer and notes ('en' or 'am')."
+    )
+    provider: str | None = Field(
+        default=None,
+        description="Observability identifier for the provider or engine that generated this response."
     )

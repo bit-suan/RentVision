@@ -393,8 +393,8 @@ p {
 
 .property-search-panel {
   display: grid;
-  gap: 22px;
-  padding: clamp(18px, 3vw, 28px);
+  gap: 16px;
+  padding: clamp(16px, 2.5vw, 22px);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
   background: var(--color-surface);
@@ -411,7 +411,7 @@ p {
 .property-filter-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px 16px;
   margin: 0;
   padding: 0;
   border: 0;
@@ -419,14 +419,15 @@ p {
 
 .property-filter-grid legend {
   grid-column: 1 / -1;
-  margin-bottom: 10px;
+  margin-bottom: 4px;
   color: var(--color-ink);
   font-size: 0.94rem;
   font-weight: 700;
 }
 
-.property-search-panel__actions {
+.property-filter-grid__clear {
   display: flex;
+  align-items: flex-end;
   justify-content: flex-end;
 }
 
@@ -2006,12 +2007,12 @@ html:has(.landing-page) {
    These override with auth-specific focus ring using legacy --green variable. */
 .form-field__control:focus {
   outline: none;
-  border-color: var(--green);
-  box-shadow: 0 0 0 2px rgba(15, 107, 63, 0.1);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(8, 127, 105, 0.15);
 }
 
 .form-field__error {
-  color: var(--danger);
+  color: #a63232;
   font-size: 0.82rem;
 }
 

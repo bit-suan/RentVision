@@ -42,6 +42,11 @@ const ALLOWED_ROOT_APP_FILES = new Set([
   'robots.txt',
   'sitemap.ts',
   'sitemap.xml',
+  'login/page.tsx',
+  'signup/page.tsx',
+  'forgot-password/page.tsx',
+  'reset-password/page.tsx',
+  'verify/page.tsx',
 ]);
 
 /**

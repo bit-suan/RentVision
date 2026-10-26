@@ -5,6 +5,7 @@ import { routing, type Locale } from "@/i18n/routing";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import I18nProvider from "@/components/i18n/I18nProvider";
+import { AuthProvider } from "@/lib/AuthContext";
 import "../globals.css";
 
 export const instant = false;
@@ -43,15 +44,17 @@ export default async function LocaleLayout({
   return (
     <html lang={locale}>
       <body className="app-body" data-locale={locale}>
-        <I18nProvider
-          locale={locale}
-          messages={messages}
-          fallbackMessages={fallbackMessages}
-        >
-          <Header />
-          <main className="site-main">{children}</main>
-          <Footer />
-        </I18nProvider>
+        <AuthProvider>
+          <I18nProvider
+            locale={locale}
+            messages={messages}
+            fallbackMessages={fallbackMessages}
+          >
+            <Header />
+            <main className="site-main">{children}</main>
+            <Footer />
+          </I18nProvider>
+        </AuthProvider>
       </body>
     </html>
   );

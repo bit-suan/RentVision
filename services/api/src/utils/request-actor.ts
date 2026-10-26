@@ -39,11 +39,8 @@ export function getActor(
     event.headers?.["X-User-Role"];
 
   const role: UserRole | undefined =
-    roleHeader === "admin" ||
-    roleHeader === "user"
+    roleHeader === "admin" || roleHeader === "user"
       ? roleHeader
-      : claimRole === "admin" || claimRole === "user"
-        ? claimRole
       : undefined;
 
   return {
@@ -51,3 +48,5 @@ export function getActor(
     role,
   };
 }
+
+export const getRequestActor = getActor;

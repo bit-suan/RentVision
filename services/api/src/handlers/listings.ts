@@ -3,8 +3,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { encodeGeohash, getBoundingBoxGeohashes } from '../utils/geohash';
 import { haversineDistance } from '../utils/distance';
 import { errorResponse, successResponse, createResponse } from '../utils/response';
-import { getActor } from '../utils/request-actor';
-import { canModifyListing, requireUser } from '../utils/auth';
+import { getActor, getRequestActor } from '../utils/request-actor';
+import { canModifyListing, requireUser, isAdmin } from '../utils/auth';
+import { validatePanorama } from '../utils/panorama-validation';
+
 import {
   CreateListingRequest,
   Listing,
@@ -154,10 +156,11 @@ async function handleGetListing(
   }
   if (
     item.status !== ListingStatus.APPROVED &&
-    !canModifyListing(item.landlordId, getRequestActor(event))
+    !canModifyListing(item.landlordId, getActor(event))
   ) {
     return errorResponse('NOT_FOUND', `Listing with ID '${listingId}' not found`, 404);
   }
+
 
   if (!item.panorama) {
     return successResponse(item);
@@ -180,30 +183,54 @@ async function handleGetListing(
 }
 
 async function handleUpdateListing(
-  listingId: string,
+  listingId: string | undefined,
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> {
   const actor = getActor(event);
   requireUser(actor);
 
-  const existing = await getListing(listingId);
-  if (!existing) {
-    return errorResponse('NOT_FOUND', 'Listing not found', 404);
+  if (!listingId) {
+    return errorResponse('VALIDATION_ERROR', 'Listing ID is required', 400);
   }
-
-  if (!canModifyListing(existing.landlordId, actor)) {
-    return errorResponse('UNAUTHORIZED', 'Not authorized to update this listing', 403);
-  }
-
   if (!event.body) {
     return errorResponse('VALIDATION_ERROR', 'Request body is required', 400);
   }
 
-  const updates = JSON.parse(event.body);
+  let updates: UpdateListingRequest;
+  try {
+    updates = JSON.parse(event.body) as UpdateListingRequest;
+  } catch {
+    return errorResponse('VALIDATION_ERROR', 'Invalid JSON payload', 400);
+  }
+
+  const listing = await getListing(listingId);
+  if (!listing) {
+    return errorResponse('NOT_FOUND', `Listing with ID '${listingId}' not found`, 404);
+  }
+  if (!canModifyListing(listing.landlordId, actor)) {
+    return errorResponse('UNAUTHORIZED', 'Not authorized to update this listing', 403);
+  }
+
+  if (updates.panorama !== undefined) {
+    try {
+      validatePanorama(updates.panorama, listingId);
+    } catch (error) {
+      return errorResponse(
+        'INVALID_PANORAMA',
+        error instanceof Error ? error.message : 'Invalid panorama metadata',
+        400
+      );
+    }
+  }
+
   const updatedListing: Listing = {
-    ...existing,
+    ...listing,
     ...updates,
     listingId, // Ensure ID cannot be changed
+    panoramaKeys:
+      updates.panorama !== undefined
+        ? updates.panorama.scenes.map((scene) => scene.s3Key)
+        : listing.panoramaKeys,
     updatedAt: new Date().toISOString(),
   };
 
@@ -218,22 +245,28 @@ async function handleUpdateStatus(
   const actor = getActor(event);
   requireUser(actor);
 
-  const existing = await getListing(listingId);
-  if (!existing) {
-    return errorResponse('NOT_FOUND', 'Listing not found', 404);
+  if (!isAdmin(actor)) {
+    return errorResponse('FORBIDDEN', 'Only admins can update listing status', 403);
   }
 
-  if (!canModifyListing(existing.landlordId, actor)) {
-    return errorResponse('UNAUTHORIZED', 'Not authorized to update status', 403);
+  const existing = await getListing(listingId);
+  if (!existing) {
+    return errorResponse('NOT_FOUND', `Listing with ID '${listingId}' not found`, 404);
   }
 
   if (!event.body) {
     return errorResponse('VALIDATION_ERROR', 'Request body is required', 400);
   }
 
-  const { status } = JSON.parse(event.body);
-  if (!status || !Object.values(ListingStatus).includes(status)) {
-    return errorResponse('VALIDATION_ERROR', 'Invalid status', 400);
+  let status: ListingStatus;
+  try {
+    const body = JSON.parse(event.body) as { status?: ListingStatus };
+    if (!body.status || !Object.values(ListingStatus).includes(body.status)) {
+      return errorResponse('INVALID_STATUS', 'Invalid listing status', 400);
+    }
+    status = body.status;
+  } catch {
+    return errorResponse('VALIDATION_ERROR', 'Invalid JSON payload', 400);
   }
 
   const updatedListing: Listing = {
@@ -255,7 +288,7 @@ async function handleAddImage(
 
   const existing = await getListing(listingId);
   if (!existing) {
-    return errorResponse('NOT_FOUND', 'Listing not found', 404);
+    return errorResponse('NOT_FOUND', `Listing with ID '${listingId}' not found`, 404);
   }
 
   if (!canModifyListing(existing.landlordId, actor)) {
@@ -266,22 +299,46 @@ async function handleAddImage(
     return errorResponse('VALIDATION_ERROR', 'Request body is required', 400);
   }
 
-  const { fileKey, type } = JSON.parse(event.body);
-  if (!fileKey) {
-    return errorResponse('VALIDATION_ERROR', 'fileKey is required', 400);
+  let body: any;
+  try {
+    body = JSON.parse(event.body);
+  } catch {
+    return errorResponse('VALIDATION_ERROR', 'Invalid JSON payload', 400);
   }
 
-  const updatedListing: Listing = { ...existing };
-  if (type === 'panorama') {
-    updatedListing.panoramaKeys = [...(existing.panoramaKeys || []), fileKey];
-  } else {
-    updatedListing.mediaKeys = [...(existing.mediaKeys || []), fileKey];
+  const imageKey = body.s3Key || body.fileKey;
+  if (!imageKey || typeof imageKey !== 'string') {
+    return errorResponse('VALIDATION_ERROR', 's3Key or fileKey is required', 400);
   }
-  updatedListing.updatedAt = new Date().toISOString();
+
+  if (!imageKey.startsWith(`listings/${listingId}/`)) {
+    return errorResponse('INVALID_IMAGE', 's3Key must belong to this listing', 400);
+  }
+
+  const updatedListing: Listing = {
+    ...existing,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (body.type === 'panorama') {
+    updatedListing.panoramaKeys = [...(existing.panoramaKeys || []), imageKey];
+  } else {
+    updatedListing.mediaKeys = [...(existing.mediaKeys || []), imageKey];
+  }
 
   await putListing(updatedListing);
-  return successResponse(updatedListing);
+  return successResponse(
+    {
+      image: { s3Key: imageKey, addedAt: updatedListing.updatedAt },
+      warnings: [],
+      listingStatus: updatedListing.status,
+      note: 'Similarity checks are not configured yet.',
+      listing: updatedListing,
+    },
+    201
+  );
 }
+
 
 async function handleListListings(
   event: APIGatewayProxyEvent
@@ -434,136 +491,8 @@ async function handleCreateListing(
   return successResponse(newListing, 201);
 }
 
-async function handleUpdateListing(
-  listingId: string | undefined,
-  event: APIGatewayProxyEvent
-): Promise<APIGatewayProxyResult> {
-  if (!listingId) {
-    return errorResponse('VALIDATION_ERROR', 'Listing ID is required', 400);
-  }
-  if (!event.body) {
-    return errorResponse('VALIDATION_ERROR', 'Request body is required', 400);
-  }
-
-  let updates: UpdateListingRequest;
-  try {
-    updates = JSON.parse(event.body) as UpdateListingRequest;
-  } catch {
-    return errorResponse('VALIDATION_ERROR', 'Invalid JSON payload', 400);
-  }
-
-  const listing = await getListing(listingId);
-  if (!listing) {
-    return errorResponse('NOT_FOUND', `Listing with ID '${listingId}' not found`, 404);
-  }
-  if (!canModifyListing(listing.landlordId, getRequestActor(event))) {
-    return errorResponse('FORBIDDEN', 'You are not allowed to modify this listing', 403);
-  }
-
-  if (updates.panorama !== undefined) {
-    try {
-      validatePanorama(updates.panorama, listingId);
-    } catch (error) {
-      return errorResponse(
-        'INVALID_PANORAMA',
-        error instanceof Error ? error.message : 'Invalid panorama metadata',
-        400
-      );
-    }
-  }
-
-  const updated: Listing = {
-    ...listing,
-    ...updates,
-    panoramaKeys:
-      updates.panorama !== undefined
-        ? updates.panorama.scenes.map((scene) => scene.s3Key)
-        : listing.panoramaKeys,
-    updatedAt: new Date().toISOString(),
-  };
-
-  await putListing(updated);
-  return successResponse(updated);
-}
-
-async function handleUpdateStatus(
-  listingId: string,
-  event: APIGatewayProxyEvent
-): Promise<APIGatewayProxyResult> {
-  if (!isAdmin(getRequestActor(event))) {
-    return errorResponse('FORBIDDEN', 'Only admins can update listing status', 403);
-  }
-  const listing = await getListing(listingId);
-  if (!listing) {
-    return errorResponse('NOT_FOUND', `Listing with ID '${listingId}' not found`, 404);
-  }
-  if (!event.body) {
-    return errorResponse('VALIDATION_ERROR', 'Request body is required', 400);
-  }
-
-  let status: ListingStatus;
-  try {
-    const body = JSON.parse(event.body) as { status?: ListingStatus };
-    if (!body.status || !Object.values(ListingStatus).includes(body.status)) {
-      return errorResponse('INVALID_STATUS', 'Invalid listing status', 400);
-    }
-    status = body.status;
-  } catch {
-    return errorResponse('VALIDATION_ERROR', 'Invalid JSON payload', 400);
-  }
-
-  const updated = { ...listing, status, updatedAt: new Date().toISOString() };
-  await putListing(updated);
-  return successResponse(updated);
-}
-
-async function handleAddImage(
-  listingId: string,
-  event: APIGatewayProxyEvent
-): Promise<APIGatewayProxyResult> {
-  const listing = await getListing(listingId);
-  if (!listing) {
-    return errorResponse('NOT_FOUND', `Listing with ID '${listingId}' not found`, 404);
-  }
-  if (!canModifyListing(listing.landlordId, getRequestActor(event))) {
-    return errorResponse('FORBIDDEN', 'You are not allowed to modify this listing', 403);
-  }
-  if (!event.body) {
-    return errorResponse('VALIDATION_ERROR', 'Request body is required', 400);
-  }
-
-  let body: { s3Key?: string };
-  try {
-    body = JSON.parse(event.body) as { s3Key?: string };
-  } catch {
-    return errorResponse('VALIDATION_ERROR', 'Invalid JSON payload', 400);
-  }
-  if (
-    typeof body.s3Key !== 'string' ||
-    !body.s3Key.startsWith(`listings/${listingId}/`)
-  ) {
-    return errorResponse('INVALID_IMAGE', 's3Key must belong to this listing', 400);
-  }
-
-  const updated: Listing = {
-    ...listing,
-    mediaKeys: [...listing.mediaKeys, body.s3Key],
-    updatedAt: new Date().toISOString(),
-  };
-  await putListing(updated);
-  return successResponse(
-    {
-      image: { s3Key: body.s3Key, addedAt: updated.updatedAt },
-      warnings: [],
-      listingStatus: updated.status,
-      note: 'Similarity checks are not configured yet.',
-      listing: updated,
-    },
-    201
-  );
-}
-
 async function handleGeoSearch(
+
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> {
   const params = event.queryStringParameters || {};
