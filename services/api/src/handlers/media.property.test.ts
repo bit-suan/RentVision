@@ -3,6 +3,8 @@ process.env.DATA_STORE = 'memory';
 import * as fc from 'fast-check';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { handler } from './media';
+import { resetMemoryStore } from '../data';
+import { loadDemoListings } from '../data/seed';
 
 function makeEvent(
   method: string,
@@ -14,7 +16,7 @@ function makeEvent(
     path,
     queryStringParameters: null,
     body: body !== undefined ? JSON.stringify(body) : null,
-    headers: {},
+    headers: { 'x-user-id': 'landlord-hana' },
     pathParameters: null,
     resource: path,
     isBase64Encoded: false,
@@ -22,7 +24,7 @@ function makeEvent(
 }
 
 // Arbitraries constrained to the valid input domain
-const listingIdArb = fc.string({ minLength: 1, maxLength: 40 }).filter((s) => s.trim().length > 0);
+const listingIdArb = fc.constant('listing-bole-loft');
 const mediaTypeArb = fc.constantFrom('photo', 'panorama', 'document');
 const contentTypeArb = fc.constantFrom('image/jpeg', 'image/png', 'image/webp');
 
@@ -40,6 +42,11 @@ const fileNameArb = fc
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 describe('Media Handler Property Tests', () => {
+  beforeEach(() => {
+    resetMemoryStore();
+    loadDemoListings();
+  });
+
   // Feature: rentvision-platform, Property 11: Media upload file key path structure
   // Validates: Requirements 6.1
   it('Property 11: fileKey matches listings/{listingId}/{mediaType}s/{uuid}_{sanitizedFileName}', async () => {

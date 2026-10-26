@@ -37,7 +37,6 @@ const propertyTypeArb = fc.constantFrom(
 // fc.float requires 32-bit float boundaries, so we use Math.fround.
 const latArb = fc.float({ min: Math.fround(8.8), max: Math.fround(9.2), noNaN: true });
 const lngArb = fc.float({ min: Math.fround(38.6), max: Math.fround(39.0), noNaN: true });
-const landlordIdArb = fc.string({ minLength: 1, maxLength: 40 });
 
 interface ValidListing {
   title: string;
@@ -46,7 +45,6 @@ interface ValidListing {
   propertyType: string;
   latitude: number;
   longitude: number;
-  landlordId: string;
 }
 
 const validListingArb: fc.Arbitrary<ValidListing> = fc.record({
@@ -56,7 +54,6 @@ const validListingArb: fc.Arbitrary<ValidListing> = fc.record({
   propertyType: propertyTypeArb,
   latitude: latArb,
   longitude: lngArb,
-  landlordId: landlordIdArb,
 });
 
 describe('Listings Handler Property Tests', () => {
@@ -117,7 +114,6 @@ describe('Listings Handler Property Tests', () => {
       propertyType: fc.option(propertyTypeArb, { nil: undefined }),
       latitude: fc.option(latArb, { nil: undefined }),
       longitude: fc.option(lngArb, { nil: undefined }),
-      landlordId: fc.option(landlordIdArb, { nil: undefined }),
     }).filter((rec) =>
       // At least one required field must be absent or undefined
       Object.values(rec).some((v) => v === undefined || v === null || v === '')
