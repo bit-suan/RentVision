@@ -17,7 +17,14 @@ import {
   type ResetPasswordInput,
   type ConfirmResetPasswordInput
 } from "aws-amplify/auth";
-import { configureAuth } from "@/lib/auth-config";
+import {
+  clearLocalAuthSession,
+  configureAuth,
+  hasLocalAuthSession,
+  isLocalAuthMode,
+  LOCAL_DEV_USER_ID,
+  startLocalAuthSession,
+} from "@/lib/auth-config";
 
 // Initialize Amplify
 configureAuth();
@@ -26,6 +33,7 @@ interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isLocalDev: boolean;
   signIn: (input: SignInInput) => Promise<void>;
   signUp: (input: SignUpInput) => Promise<void>;
   confirmSignUp: (input: ConfirmSignUpInput) => Promise<void>;
@@ -37,11 +45,29 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function localDevUser(): AuthUser {
+  return {
+    username: LOCAL_DEV_USER_ID,
+    userId: LOCAL_DEV_USER_ID,
+    signInDetails: {
+      loginId: LOCAL_DEV_USER_ID,
+      authFlowType: "USER_SRP_AUTH",
+    },
+  } as unknown as AuthUser;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const localDev = isLocalAuthMode();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const checkUser = useCallback(async () => {
+    if (localDev) {
+      setUser(hasLocalAuthSession() ? localDevUser() : null);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const currentUser = await getCurrentUser();
       setUser(currentUser);
@@ -50,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [localDev]);
 
   useEffect(() => {
     (async () => {
@@ -59,32 +85,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [checkUser]);
 
   const signIn = async (input: SignInInput) => {
+    if (localDev) {
+      startLocalAuthSession();
+      setUser(localDevUser());
+      return;
+    }
     await amplifySignIn(input);
     await checkUser();
   };
 
   const signUp = async (input: SignUpInput) => {
+    if (localDev) {
+      return;
+    }
     await amplifySignUp(input);
   };
 
   const confirmSignUp = async (input: ConfirmSignUpInput) => {
+    if (localDev) {
+      return;
+    }
     await amplifyConfirmSignUp(input);
   };
 
   const resendSignUpCode = async (username: string) => {
+    if (localDev) {
+      return;
+    }
     await amplifyResendSignUpCode({ username });
   };
 
   const signOut = async () => {
+    if (localDev) {
+      clearLocalAuthSession();
+      setUser(null);
+      return;
+    }
     await amplifySignOut();
     setUser(null);
   };
 
   const requestPasswordReset = async (input: ResetPasswordInput) => {
+    if (localDev) {
+      return;
+    }
     await amplifyResetPassword(input);
   };
 
   const confirmPasswordReset = async (input: ConfirmResetPasswordInput) => {
+    if (localDev) {
+      return;
+    }
     await amplifyConfirmResetPassword(input);
   };
 
@@ -94,6 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         isAuthenticated: !!user,
         isLoading,
+        isLocalDev: localDev,
         signIn,
         signUp,
         confirmSignUp,
