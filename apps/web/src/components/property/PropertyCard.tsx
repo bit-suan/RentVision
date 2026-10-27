@@ -9,11 +9,7 @@ interface PropertyCardProps {
   property: Property;
 }
 
-function availabilityTone(availability: Property["availability"]) {
-  if (availability === "AVAILABLE") return "success";
-  if (availability === "COMING_SOON") return "warning";
-  return "neutral";
-}
+
 
 function BedIcon() {
   return (
@@ -111,22 +107,12 @@ function matchesAny(amenities: string[], keywords: string[]): boolean {
 
 export default function PropertyCard({ property }: PropertyCardProps) {
   const t = useTranslations("PropertyCard");
-  const tAvail = useTranslations("Availability");
   const tType = useTranslations("PropertyTypes");
-  const tTrust = useTranslations("TrustStatus");
   const locale = useLocale();
 
   const propertyTypeLabel = tType.has(property.propertyType)
     ? tType(property.propertyType)
     : property.propertyType;
-
-  const availabilityLabel = tAvail.has(property.availability)
-    ? tAvail(property.availability)
-    : property.availability;
-
-  const trustStatusLabel = tTrust.has(property.trustStatus)
-    ? tTrust(property.trustStatus)
-    : property.trustStatus;
 
   // The critical essentials in Ethiopia: Power (Generator) & Water (Water Tank)
   const amenities = property.amenities ?? [];
@@ -171,6 +157,15 @@ export default function PropertyCard({ property }: PropertyCardProps) {
           width={500}
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
         />
+        {property.panorama && (
+          <div className="property-card__tour-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="tour-badge-icon">
+              <circle cx="12" cy="12" r="10" />
+              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+            </svg>
+            <span>360° Tour</span>
+          </div>
+        )}
       </div>
 
       <div className="property-card__body">
@@ -212,12 +207,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
           ))}
         </div>
 
-        <div className="property-card__statuses">
-          <Badge tone={availabilityTone(property.availability)}>
-            {availabilityLabel}
-          </Badge>
-          <Badge tone="warning">{trustStatusLabel}</Badge>
-        </div>
+
 
         <Button href={`/properties/${property.id}`} variant="secondary">
           {t("viewProperty")}

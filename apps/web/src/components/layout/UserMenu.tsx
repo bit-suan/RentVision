@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 import { useAuth } from "@/lib/AuthContext";
 import Button from "@/components/ui/Button";
 
@@ -12,25 +12,32 @@ export default function UserMenu() {
   }
 
   if (isAuthenticated) {
-    // user.username is the Cognito username (email for email-based pools)
-    const displayName = user?.username ?? user?.userId ?? "Account";
+    const fullName = [user?.givenName, user?.familyName].filter(Boolean).join(" ");
+    const displayName = fullName || user?.username || user?.userId || "Account";
+    const initial = displayName.charAt(0).toUpperCase();
     return (
-      <div className="user-menu">
-        <span className="user-email">{displayName}</span>
-        <Button variant="quiet" onClick={() => signOut()}>
+      <div className="user-menu-pill">
+        <span className="user-menu-avatar" aria-hidden="true">
+          {initial}
+        </span>
+        <span className="user-menu-name" title={displayName}>
+          {displayName}
+        </span>
+        <button
+          type="button"
+          className="user-menu-signout"
+          onClick={() => signOut()}
+        >
           Sign Out
-        </Button>
+        </button>
       </div>
     );
   }
 
   return (
     <div className="user-menu">
-      <Link href="/login" className="button button--secondary">
+      <Link href="/login" className="site-nav__link">
         Log In
-      </Link>
-      <Link href="/signup" className="button button--primary">
-        Sign Up
       </Link>
     </div>
   );

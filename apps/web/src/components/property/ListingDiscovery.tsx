@@ -35,6 +35,7 @@ const mapCenterTimeout = useRef<NodeJS.Timeout | null>(null);
     const maxPrice = searchParams.get("maxPrice");
     const bedrooms = searchParams.get("bedrooms");
     const propertyType = searchParams.get("propertyType");
+    const hasTour = searchParams.get("hasTour");
     const offset = searchParams.get("offset");
 
     if (lat) params.lat = Number(lat);
@@ -44,6 +45,7 @@ const mapCenterTimeout = useRef<NodeJS.Timeout | null>(null);
     if (maxPrice) params.maxPrice = Number(maxPrice);
     if (bedrooms) params.bedrooms = Number(bedrooms);
     if (propertyType) params.propertyType = propertyType;
+    if (hasTour === "true" || hasTour === "1") params.hasTour = true;
     if (offset) params.offset = Number(offset);
     params.limit = 12; // Default page size
 
@@ -141,6 +143,53 @@ const mapCenterTimeout = useRef<NodeJS.Timeout | null>(null);
           prices, and narrow the results to find a place that fits your needs.
         </p>
       </header>
+
+      {filters.lat !== undefined && filters.lng !== undefined && (
+        <div className="near-me-banner">
+          <div className="near-me-banner__content">
+            <span className="near-me-banner__badge"> Proximity Search</span>
+            <span className="near-me-banner__text">
+              Showing rentals within {filters.radiusKm || 10} km of your location
+            </span>
+          </div>
+          <div className="near-me-banner__actions">
+            <label className="near-me-banner__label">
+              <span>Radius:</span>
+              <select
+                className="near-me-radius-select"
+                value={filters.radiusKm || 10}
+                onChange={(e) => {
+                  const params = new URLSearchParams(searchParams.toString());
+                  params.set("radiusKm", e.target.value);
+                  params.delete("offset");
+                  router.replace(`/properties?${params.toString()}`);
+                }}
+              >
+                <option value="5">5 km</option>
+                <option value="10">10 km</option>
+                <option value="15">15 km</option>
+                <option value="25">25 km</option>
+                <option value="50">50 km</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              className="near-me-clear-btn"
+              onClick={() => {
+                const params = new URLSearchParams(searchParams.toString());
+                params.delete("lat");
+                params.delete("lng");
+                params.delete("radiusKm");
+                params.delete("nearMe");
+                params.delete("offset");
+                router.replace(`/properties?${params.toString()}`);
+              }}
+            >
+              Clear location
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="discovery-controls-wrapper" style={{ marginBottom: '2rem' }}>
         <ListingSearchControls 

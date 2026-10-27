@@ -1,9 +1,23 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import "pannellum/build/pannellum.css";
 import type { TourScene } from "@/lib/tours";
 
-type PannellumViewer = { destroy: () => void };
+type PannellumViewer = {
+  destroy: () => void;
+  loadScene: (sceneId: string) => void;
+  getScene: () => string;
+  on: (event: string, handler: (sceneId?: string) => void) => void;
+};
+
+const ROOM_ICONS: Record<string, string> = {
+  living: "🛋️",
+  bedroom: "🛏️",
+  kitchen: "🍳",
+  dining: "🍽️",
+  balcony: "🌅",
+};
 
 export function PanoramaViewer({
   scenes,
@@ -13,10 +27,12 @@ export function PanoramaViewer({
   defaultSceneId: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<PannellumViewer | null>(null);
+  const [activeScene, setActiveScene] = useState<string>(defaultSceneId || scenes[0]?.id || "living");
 
   useEffect(() => {
     const el = containerRef.current;
-    if (!el) {
+    if (!el || scenes.length === 0) {
       return;
     }
 
@@ -46,6 +62,7 @@ export function PanoramaViewer({
           title: scene.title,
           type: "equirectangular",
           panorama: scene.imageUrl,
+          autoLoad: true,
           hotSpots: scene.hotspots.map((hotspot) => ({
             pitch: hotspot.pitch,
             yaw: hotspot.yaw,
@@ -58,11 +75,29 @@ export function PanoramaViewer({
 
       viewer = pannellum.viewer(el, {
         default: {
-          firstScene: defaultSceneId,
-          sceneFadeDuration: 800,
+          firstScene: defaultSceneId || scenes[0]?.id,
+          sceneFadeDuration: 600,
           autoLoad: true,
+          showZoomCtrl: true,
+          showFullscreenCtrl: true,
+          compass: true,
         },
         scenes: sceneConfig,
+      });
+
+      viewerRef.current = viewer;
+
+      viewer.on("scenechange", (sceneId?: string) => {
+        if (sceneId) {
+          setActiveScene(sceneId);
+        } else {
+          try {
+            const current = viewer?.getScene();
+            if (current) setActiveScene(current);
+          } catch {
+            // ignore
+          }
+        }
       });
     };
 
@@ -71,8 +106,47 @@ export function PanoramaViewer({
     return () => {
       cancelled = true;
       viewer?.destroy();
+      viewerRef.current = null;
     };
   }, [defaultSceneId, scenes]);
 
-  return <div ref={containerRef} className="tour-frame" />;
+  const switchScene = (sceneId: string) => {
+    setActiveScene(sceneId);
+    try {
+      viewerRef.current?.loadScene(sceneId);
+    } catch (e) {
+      console.warn("Failed to switch scene:", e);
+    }
+  };
+
+  return (
+    <div className="tour-wrapper">
+      {/* Interactive Room Navigation Bar */}
+      {scenes.length > 1 && (
+        <nav aria-label="Room navigation" className="tour-room-bar">
+          <span className="tour-room-bar__label">Explore Rooms:</span>
+          <div className="tour-room-bar__pills">
+            {scenes.map((scene) => {
+              const isActive = activeScene === scene.id;
+              const icon = ROOM_ICONS[scene.id] || "📍";
+              return (
+                <button
+                  key={scene.id}
+                  type="button"
+                  onClick={() => switchScene(scene.id)}
+                  className={`tour-room-pill ${isActive ? "tour-room-pill--active" : ""}`}
+                >
+                  <span className="tour-room-pill__icon">{icon}</span>
+                  <span>{scene.title}</span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      )}
+
+      {/* Pannellum 360 viewer frame */}
+      <div ref={containerRef} className="tour-frame" />
+    </div>
+  );
 }

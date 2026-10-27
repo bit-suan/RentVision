@@ -1,6 +1,8 @@
 import { setRequestLocale } from "next-intl/server";
 import LandlordPropertyDetail from "@/components/landlord/LandlordPropertyDetail";
 
+export const instant = false;
+
 interface LandlordPropertyPageProps {
   params: Promise<{ locale: string; id: string }>;
   searchParams: Promise<{ saved?: string }>;

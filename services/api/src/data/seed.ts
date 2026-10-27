@@ -1,6 +1,7 @@
+import crypto from 'crypto';
 import { encodeGeohash } from '../utils/geohash';
 import { Lease, Listing, ListingStatus, PropertyType } from '../types';
-import { putLease, seedListings } from './index';
+import { putLease, putUser, seedListings, type UserRecord } from './index';
 
 const now = new Date().toISOString();
 
@@ -173,8 +174,25 @@ export const DEMO_LEASES: Lease[] = DEMO_LISTINGS.map((item) => ({
   updatedAt: now,
 }));
 
+export function seedDemoUsers(): void {
+  const defaultSalt = 'a1b2c3d4e5f67890';
+  const defaultHash = crypto.scryptSync('password123', defaultSalt, 64).toString('hex');
+  const demoLandlord: UserRecord = {
+    userId: 'landlord-demo',
+    email: 'demo@rentvision.com',
+    passwordHash: `${defaultSalt}:${defaultHash}`,
+    givenName: 'Demo',
+    familyName: 'Landlord',
+    role: 'landlord',
+    createdAt: now,
+    updatedAt: now,
+  };
+  void putUser(demoLandlord);
+}
+
 export function loadDemoListings(): void {
   seedListings(DEMO_LISTINGS);
+  seedDemoUsers();
   for (const lease of DEMO_LEASES) {
     void putLease(lease);
   }

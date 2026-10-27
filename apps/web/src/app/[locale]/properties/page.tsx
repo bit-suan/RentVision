@@ -4,6 +4,8 @@ import ListingDiscovery from "@/components/property/ListingDiscovery";
 import { routing } from "@/i18n/routing";
 import { setRequestLocale } from "next-intl/server";
 
+export const instant = false;
+
 export function generateStaticParams() {
   return routing.locales.map((locale: string) => ({ locale }));
 }

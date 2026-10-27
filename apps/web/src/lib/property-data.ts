@@ -63,7 +63,22 @@ export const mockProperties: MockProperty[] = [
     description:
       "A bright, modern apartment with comfortable living spaces in Bole.",
     amenities: ["Generator", "Water Tank", "WiFi", "Parking"],
-    trustStatus: "Verification pending",
+    trustStatus: "Verified",
+    panorama: {
+      deliveryUrl: "/images/panoramas/living-room.jpg",
+      title: "Bole Apartment Living Room",
+      initialView: { yaw: 0, pitch: 0, hfov: 100 },
+      hotspots: [
+        {
+          id: "p1-spot-bedroom",
+          pitch: -6,
+          yaw: 38,
+          text: "Master Bedroom",
+          type: "SCENE",
+          targetPanoramaId: "bedroom",
+        },
+      ],
+    },
   },
   {
     id: "property-002",
@@ -84,7 +99,22 @@ export const mockProperties: MockProperty[] = [
     description:
       "A spacious apartment in Kazanchis with room for family living.",
     amenities: ["Generator", "Water Tank", "Parking", "WiFi"],
-    trustStatus: "Verification pending",
+    trustStatus: "Verified",
+    panorama: {
+      deliveryUrl: "/images/panoramas/bedroom.jpg",
+      title: "Kazanchis Family Apartment",
+      initialView: { yaw: 10, pitch: 0, hfov: 100 },
+      hotspots: [
+        {
+          id: "p2-spot-living",
+          pitch: -4,
+          yaw: -110,
+          text: "Living Area",
+          type: "SCENE",
+          targetPanoramaId: "living",
+        },
+      ],
+    },
   },
   {
     id: "property-003",
@@ -105,7 +135,21 @@ export const mockProperties: MockProperty[] = [
     description:
       "A modern villa in CMC with generous indoor and outdoor space.",
     amenities: ["Generator", "Water Tank", "Parking", "WiFi"],
-    trustStatus: "Verification pending",
+    trustStatus: "Verified",
+    panorama: {
+      deliveryUrl: "/images/panoramas/living-room.jpg",
+      title: "CMC Modern Villa",
+      initialView: { yaw: -15, pitch: -2, hfov: 100 },
+      hotspots: [
+        {
+          id: "p3-spot-patio",
+          pitch: -5,
+          yaw: 55,
+          text: "Garden Terrace",
+          type: "INFO",
+        },
+      ],
+    },
   },
   {
     id: "property-004",
@@ -126,6 +170,42 @@ export const mockProperties: MockProperty[] = [
     description:
       "A comfortable one-bedroom apartment in Sar Bet at an accessible price.",
     amenities: ["Water Tank", "WiFi", "Parking", "Generator"],
-    trustStatus: "Verification pending",
+    trustStatus: "Verified",
+  },
+  {
+    id: "listing-bole-loft",
+    title: "Bole Loft with City Views",
+    location: "Bole Atlas, Addis Ababa",
+    price: 45000,
+    bedrooms: 2,
+    bathrooms: 2,
+    propertyType: "Apartment",
+    availability: "AVAILABLE",
+    imageUrl:
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688",
+    galleryImages: [
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688",
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267",
+      "https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
+    ],
+    description:
+      "Bright two-bedroom loft near Bole Atlas, walking distance to cafes and the airport corridor. Complete with 360° virtual tour.",
+    amenities: ["Generator", "Water Tank", "Elevator", "Fiber WiFi", "Parking"],
+    trustStatus: "Verified",
+    panorama: {
+      deliveryUrl: "/images/panoramas/living-room.jpg",
+      title: "Bole Loft Living Room",
+      initialView: { yaw: 0, pitch: 0, hfov: 100 },
+      hotspots: [
+        {
+          id: "bole-spot-bedroom",
+          pitch: -6,
+          yaw: 40,
+          text: "Master Bedroom",
+          type: "SCENE",
+          targetPanoramaId: "bedroom",
+        },
+      ],
+    },
   },
 ];

@@ -1,23 +1,20 @@
 {
   "Header": {
     "home": "Home",
-    "exploreRentals": "Explore Rentals",
-    "howItWorks": "How It Works",
-    "trustAndSafety": "Trust & Safety",
-    "listYourProperty": "List Your Property",
     "properties": "Properties",
-    "map": "Map",
-    "login": "Login",
+    "listProperty": "List Property",
+    "listYourProperty": "List Property",
+    "login": "Log In",
     "signIn": "Sign In",
     "createAccount": "Create Account",
     "brandAria": "RentVision home",
     "navAria": "Main navigation"
   },
   "Footer": {
-    "tagline": "Find a place you can trust.",
+    "tagline": "Find a place you can trust in Addis Ababa.",
     "home": "Home",
-    "properties": "Properties",
-    "map": "Map",
+    "properties": "Rentals",
+    "map": "Map View",
     "contact": "Contact",
     "phone": "+251 XX XXX XXXX",
     "email": "hello@rentvision.com",
@@ -39,10 +36,12 @@
   "Landing": {
     "title": "RentVision",
     "tagline": "Find a place you can trust.",
-    "description": "Discover rental properties with location-aware search, verified listings, and AI-powered lease insights.",
-    "exploreProperties": "Explore properties",
+    "description": "Discover verified rental properties with immersive 360° virtual tours across Addis Ababa.",
+    "exploreProperties": "Browse all rentals",
     "searchOnMap": "Search on map",
-    "heroAlt": "Modern home with warm lighting and landscaped garden",
+    "searchNearMe": "Search near me",
+    "locating": "Locating near you...",
+    "heroAlt": "Modern home with warm lighting and landscaped garden in Addis Ababa",
     "whyRentVision": "Why RentVision?",
     "features": {
       "discover": {
@@ -52,12 +51,12 @@
       },
       "trust": {
         "title": "Trust",
-        "description": "Duplicate detection",
+        "description": "Verified listings",
         "alt": "Modern bathroom with shower, vanity, and mirror"
       },
       "understand": {
         "title": "Understand",
-        "description": "AI lease insights",
+        "description": "360° virtual walk-throughs",
         "alt": "Warm, naturally lit living room with a sofa"
       }
     }
@@ -114,6 +113,7 @@
     "leaseHeading": "Questions about the lease?",
     "leaseDescription": "Lease questions will be available in the renter portal. This property is included as context for the future Q&A flow.",
     "askAboutLease": "Ask about the lease",
+    "messageLandlord": "Message Landlord",
     "unableToLoad": "Unable to load listing",
     "openTour": "Open 360° tour",
     "askTheLease": "Ask the lease",
