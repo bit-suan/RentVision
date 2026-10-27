@@ -52,17 +52,19 @@ export default async function LocaleLayout({
   return (
     <html lang={locale}>
       <body className="app-body" data-locale={locale} suppressHydrationWarning>
-        <I18nProvider
-          locale={locale}
-          messages={messages}
-          fallbackMessages={fallbackMessages}
-        >
-          <LocaleHtmlLang locale={locale} />
-          <Header />
-          <main className="site-main">{children}</main>
-          <Footer />
-          <RentVisionAssistant />
-        </I18nProvider>
+        <AuthProvider>
+          <I18nProvider
+            locale={locale}
+            messages={messages}
+            fallbackMessages={fallbackMessages}
+          >
+            <LocaleHtmlLang locale={locale} />
+            <Header />
+            <main className="site-main">{children}</main>
+            <Footer />
+            <RentVisionAssistant />
+          </I18nProvider>
+        </AuthProvider>
       </body>
     </html>
   );

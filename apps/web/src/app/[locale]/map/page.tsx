@@ -4,6 +4,8 @@ import { setRequestLocale } from "next-intl/server";
 import Spinner from "@/components/ui/Spinner";
 import MapPageClient from "./MapPageClient";
 
+export const instant = false;
+
 export function generateStaticParams() {
   return routing.locales.map((locale: string) => ({ locale }));
 }

@@ -121,9 +121,19 @@ async function PropertyDetails({
                 </p>
                 <Button
                   className="button--primary property-booking-card__cta"
-                  href={`/renter/lease?propertyId=${encodeURIComponent(property.id)}`}
+                  href={`/properties/${encodeURIComponent(property.id)}/lease`}
                 >
                   {t("askAboutLease")}
+                </Button>
+                <Button
+                  className="button--secondary property-booking-card__message"
+                  href={`/properties/${encodeURIComponent(property.id)}/messages`}
+                  style={{ marginTop: "0.75rem", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: "18px", height: "18px" }}>
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                  {t("messageLandlord")}
                 </Button>
               </div>
             </div>

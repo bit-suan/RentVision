@@ -114,6 +114,7 @@ export interface ListingSearchQuery {
   maxPrice?: number;
   bedrooms?: number;
   propertyType?: string;
+  hasTour?: boolean;
   limit?: number;
   offset?: number;
 }

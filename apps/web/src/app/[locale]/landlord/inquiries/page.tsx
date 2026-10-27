@@ -1,6 +1,8 @@
 import { setRequestLocale } from "next-intl/server";
 import LandlordInquiries from "@/components/landlord/LandlordInquiries";
 
+export const instant = false;
+
 interface LandlordInquiriesPageProps {
   params: Promise<{ locale: string }>;
 }

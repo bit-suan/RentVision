@@ -1,12 +1,9 @@
 {
   "Header": {
     "home": "መነሻ",
-    "exploreRentals": "Explore Rentals",
-    "howItWorks": "How It Works",
-    "trustAndSafety": "Trust & Safety",
-    "listYourProperty": "List Your Property",
     "properties": "ንብረቶች",
-    "map": "ካርታ",
+    "listProperty": "ቤት ያስመዝግቡ",
+    "listYourProperty": "ቤትዎን ያስመዝግቡ",
     "login": "ግባ",
     "signIn": "Sign In",
     "createAccount": "Create Account",
@@ -14,9 +11,9 @@
     "navAria": "ዋና አሰሳ"
   },
   "Footer": {
-    "tagline": "የሚተማመኑበትን የመኖሪያ ቦታ ያግኙ።",
+    "tagline": "የሚተማመኑበትን የመኖሪያ ቦታ በአዲስ አበባ ያግኙ።",
     "home": "መነሻ",
-    "properties": "ንብረቶች",
+    "properties": "ኪራዮች",
     "map": "ካርታ",
     "contact": "አድራሻ",
     "phone": "+251 XX XXX XXXX",
@@ -39,9 +36,11 @@
   "Landing": {
     "title": "ሬንትቪዥን",
     "tagline": "የሚተማመኑበትን የመኖሪያ ቦታ ያግኙ።",
-    "description": "በአካባቢ ላይ በተመሠረተ ፍለጋ፣ በተረጋገጡ ዝርዝሮች እና በአይ-አይ የኪራይ ውል ትንተና አማካኝነት የኪራይ ቤቶችን ያግኙ።",
-    "exploreProperties": "ንብረቶችን ያስሱ",
+    "description": "በአካባቢ ላይ በተመሠረተ ፍለጋ፣ በተረጋገጡ ዝርዝሮች እና በ 360° ቨርቹዋል ጉብኝት አማካኝነት የኪራይ ቤቶችን ያግኙ።",
+    "exploreProperties": "ሁሉንም ኪራዮች ያስሱ",
     "searchOnMap": "በካርታ ላይ ይፈልጉ",
+    "searchNearMe": "በአቅራቢያዬ ፈልግ",
+    "locating": "በመፈለግ ላይ...",
     "heroAlt": "ዘመናዊ ቤት ከውብ መብራት እና አትክልት ስፍራ ጋር",
     "whyRentVision": "ለምን ሬንትቪዥን?",
     "features": {
@@ -52,12 +51,12 @@
       },
       "trust": {
         "title": "እምነት",
-        "description": "ተደጋጋሚ ዝርዝሮችን መለየት",
+        "description": "የተረጋገጡ ዝርዝሮች",
         "alt": "ዘመናዊ መታጠቢያ ቤት ከመስታወት ጋር"
       },
       "understand": {
         "title": "መረዳት",
-        "description": "የአይ-አይ የውል ግንዛቤዎች",
+        "description": "360° ቨርቹዋል ጉብኝት",
         "alt": "ምቹ ሳሎን ከሶፋ ጋር"
       }
     }
@@ -114,6 +113,7 @@
     "leaseHeading": "ስለ ውሉ ጥያቄ አለዎት?",
     "leaseDescription": "የውል ጥያቄዎች በተከራይ ፖርታል ውስጥ ይገኛሉ። ይህ ንብረት ለወደፊቱ የጥያቄና መልስ ፍሰት እንደ አውድ ተካቷል።",
     "askAboutLease": "ስለ ውሉ ይጠይቁ",
+    "messageLandlord": "ለአከራዩ መልእክት ይላኩ",
     "loading": "የንብረት ዝርዝር በመጫን ላይ ነው",
     "unableToLoad": "ዝርዝሩን መጫን አልተቻለም",
     "openTour": "የ360° ጉብኝት ይክፈቱ",

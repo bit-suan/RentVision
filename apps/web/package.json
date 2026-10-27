@@ -36,5 +36,8 @@
     "jest": "^29.7.0",
     "ts-jest": "^29.4.15",
     "typescript": "^5"
+  },
+  "optionalDependencies": {
+    "@parcel/watcher-win32-x64": "^2.6.0"
   }
 }

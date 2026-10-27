@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Link } from "@/i18n/routing";
+import { Link, usePathname } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
 import LanguageSwitcher from "./LanguageSwitcher";
@@ -10,6 +10,11 @@ import UserMenu from "./UserMenu";
 export default function Header() {
   const t = useTranslations("Header");
   const [menuOpen, setMenuOpen] = useState(false);
+  const pathname = usePathname();
+
+  const isHome = pathname === "/" || pathname === "";
+  const isProperties = pathname.startsWith("/properties");
+  const isListProperty = pathname.startsWith("/landlord/properties/new");
 
   return (
     <header className="site-header">
@@ -43,21 +48,26 @@ export default function Header() {
           aria-label={t("navAria")}
           className={`site-nav ${menuOpen ? "is-open" : ""}`}
         >
-          <Link href="/properties" onClick={() => setMenuOpen(false)}>
-            {t("exploreRentals")}
-          </Link>
-          <Link href="/#how-it-works" onClick={() => setMenuOpen(false)}>
-            {t("howItWorks")}
-          </Link>
-          <Link href="/#trust-safety" onClick={() => setMenuOpen(false)}>
-            {t("trustAndSafety")}
+          <Link
+            className={`site-nav__link ${isHome ? "site-nav__link--active" : ""}`}
+            href="/"
+            onClick={() => setMenuOpen(false)}
+          >
+            {t("home")}
           </Link>
           <Link
-            className="button button--secondary"
+            className={`site-nav__link ${isProperties ? "site-nav__link--active" : ""}`}
+            href="/properties"
+            onClick={() => setMenuOpen(false)}
+          >
+            {t("properties")}
+          </Link>
+          <Link
+            className={`site-nav__link site-nav__link--cta ${isListProperty ? "site-nav__link--active" : ""}`}
             href="/landlord/properties/new"
             onClick={() => setMenuOpen(false)}
           >
-            {t("listYourProperty")}
+            {t("listProperty")}
           </Link>
           <UserMenu />
           <LanguageSwitcher />

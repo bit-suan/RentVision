@@ -20,17 +20,29 @@ import {
 import {
   clearLocalAuthSession,
   configureAuth,
+  getLocalSessionUser,
   hasLocalAuthSession,
   isLocalAuthMode,
   LOCAL_DEV_USER_ID,
-  startLocalAuthSession,
+  setLocalSessionUser,
+  type LocalUserData,
 } from "@/lib/auth-config";
 
 // Initialize Amplify
 configureAuth();
 
+const API_BASE = (
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001"
+).replace(/\/$/, "");
+
+export interface ExtendedAuthUser extends AuthUser {
+  givenName?: string;
+  familyName?: string;
+  role?: string;
+}
+
 interface AuthContextType {
-  user: AuthUser | null;
+  user: ExtendedAuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   isLocalDev: boolean;
@@ -45,32 +57,40 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function localDevUser(): AuthUser {
+function mapLocalUserToAuthUser(data: LocalUserData): ExtendedAuthUser {
   return {
-    username: LOCAL_DEV_USER_ID,
-    userId: LOCAL_DEV_USER_ID,
+    username: data.email,
+    userId: data.userId,
+    givenName: data.givenName,
+    familyName: data.familyName,
+    role: data.role,
     signInDetails: {
-      loginId: LOCAL_DEV_USER_ID,
+      loginId: data.email,
       authFlowType: "USER_SRP_AUTH",
     },
-  } as unknown as AuthUser;
+  } as ExtendedAuthUser;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const localDev = isLocalAuthMode();
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<ExtendedAuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const checkUser = useCallback(async () => {
     if (localDev) {
-      setUser(hasLocalAuthSession() ? localDevUser() : null);
+      const sessionUser = getLocalSessionUser();
+      if (sessionUser) {
+        setUser(mapLocalUserToAuthUser(sessionUser));
+      } else {
+        setUser(null);
+      }
       setIsLoading(false);
       return;
     }
 
     try {
       const currentUser = await getCurrentUser();
-      setUser(currentUser);
+      setUser(currentUser as ExtendedAuthUser);
     } catch {
       setUser(null);
     } finally {
@@ -86,18 +106,85 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (input: SignInInput) => {
     if (localDev) {
-      startLocalAuthSession();
-      setUser(localDevUser());
+      const email = input.username?.trim();
+      const password = input.password;
+
+      let res: Response;
+      try {
+        res = await fetch(`${API_BASE}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Failed to connect to authentication server.";
+        throw new Error(msg);
+      }
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data?.error?.message || "Incorrect email or password.");
+      }
+
+      const userData = data.data?.user;
+      const sessionUser: LocalUserData = {
+        userId: userData.userId,
+        email: userData.email,
+        givenName: userData.givenName,
+        familyName: userData.familyName,
+        role: userData.role,
+        token: data.data?.token,
+      };
+
+      setLocalSessionUser(sessionUser);
+      setUser(mapLocalUserToAuthUser(sessionUser));
       return;
     }
+
     await amplifySignIn(input);
     await checkUser();
   };
 
   const signUp = async (input: SignUpInput) => {
     if (localDev) {
+      const email = (input.options?.userAttributes?.email || input.username)?.trim();
+      const givenName = input.options?.userAttributes?.given_name || "";
+      const familyName = input.options?.userAttributes?.family_name || "";
+      const password = input.password;
+
+      let res: Response;
+      try {
+        res = await fetch(`${API_BASE}/auth/signup`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, givenName, familyName }),
+        });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Failed to connect to authentication server.";
+        throw new Error(msg);
+      }
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data?.error?.message || "Failed to create account.");
+      }
+
+      const userData = data.data?.user;
+      const sessionUser: LocalUserData = {
+        userId: userData.userId,
+        email: userData.email,
+        givenName: userData.givenName,
+        familyName: userData.familyName,
+        role: userData.role,
+        token: data.data?.token,
+      };
+
+      // Instantly log in and save session without requiring email verification
+      setLocalSessionUser(sessionUser);
+      setUser(mapLocalUserToAuthUser(sessionUser));
       return;
     }
+
     await amplifySignUp(input);
   };
 

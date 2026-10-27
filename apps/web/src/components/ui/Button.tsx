@@ -8,6 +8,7 @@ interface ButtonStyleProps {
   children: ReactNode;
   variant?: ButtonVariant;
   className?: string;
+  style?: React.CSSProperties;
   isLoading?: boolean;
 }
 
@@ -54,6 +55,7 @@ export default function Button(props: ButtonProps) {
         href={rest.href}
         target={rest.target}
         rel={rest.rel}
+        style={props.style}
       >
         {children}
       </Link>
@@ -63,6 +65,7 @@ export default function Button(props: ButtonProps) {
   return (
     <button
       className={classes}
+      style={props.style}
       disabled={isLoading || (rest as NativeButtonProps).disabled}
       {...(rest as NativeButtonProps)}
     >

@@ -5,6 +5,7 @@ import { handler as listingsHandler } from './handlers/listings';
 import { handler as mediaHandler } from './handlers/media';
 import { handler as leasesHandler } from './handlers/leases';
 import { handler as healthHandler } from './handlers/health';
+import { handler as authHandler } from './handlers/auth';
 import { getLocalObject, putLocalObject } from './data';
 import { loadDemoListings } from './data/seed';
 
@@ -21,7 +22,7 @@ function setCors(res: ServerResponse): void {
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
   res.setHeader(
     'Access-Control-Allow-Headers',
-    'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'
+    'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token,X-User-Id,x-user-id,X-User-Role,x-user-role'
   );
 }
 
@@ -104,6 +105,9 @@ function toEvent(
 function routeHandler(pathname: string) {
   if (pathname === '/health') {
     return healthHandler;
+  }
+  if (pathname.includes('/auth')) {
+    return authHandler;
   }
   if (pathname.includes('/listings')) {
     return listingsHandler;

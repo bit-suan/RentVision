@@ -20,10 +20,25 @@ export function useMemoryStore(): boolean {
   );
 }
 
+export interface UserRecord {
+  userId: string;
+  email: string;
+  passwordHash: string;
+  givenName: string;
+  familyName: string;
+  role: 'user' | 'landlord' | 'admin';
+  createdAt: string;
+  updatedAt: string;
+}
+
 const PROPERTIES_TABLE =
   process.env.DYNAMODB_PROPERTIES_TABLE || 'rentvision-properties-dev';
 const LEASES_TABLE =
   process.env.DYNAMODB_LEASES_TABLE || 'rentvision-leases-dev';
+const USERS_TABLE =
+  process.env.DYNAMODB_USERS_TABLE || 'rentvision-users-dev';
+const USERS_EMAIL_INDEX_NAME =
+  process.env.USERS_EMAIL_INDEX_NAME || 'emailIndex';
 const GEO_INDEX_NAME =
   process.env.LISTINGS_GEO_INDEX_NAME || 'geoIndex';
 const STATUS_INDEX_NAME =
@@ -36,6 +51,8 @@ const LEASE_BUCKET =
 const listingsMemory = new Map<string, Listing>();
 const leasesMemory = new Map<string, Lease>();
 const objectMemory = new Map<string, { contentType: string; body: Buffer }>();
+const usersMemory = new Map<string, UserRecord>();
+const usersByEmailMemory = new Map<string, string>();
 
 let docClient: DynamoDBDocumentClient | undefined;
 let s3Client: S3Client | undefined;
@@ -60,6 +77,8 @@ export function resetMemoryStore(): void {
   listingsMemory.clear();
   leasesMemory.clear();
   objectMemory.clear();
+  usersMemory.clear();
+  usersByEmailMemory.clear();
 }
 
 export function seedListings(listings: Listing[]): void {
@@ -240,4 +259,53 @@ export function getLocalObject(
   fileKey: string
 ): { contentType: string; body: Buffer } | undefined {
   return objectMemory.get(fileKey);
+}
+
+export async function putUser(user: UserRecord): Promise<void> {
+  if (useMemoryStore()) {
+    usersMemory.set(user.userId, user);
+    usersByEmailMemory.set(user.email.toLowerCase(), user.userId);
+    return;
+  }
+
+  await getDocClient().send(
+    new PutCommand({
+      TableName: USERS_TABLE,
+      Item: user,
+    })
+  );
+}
+
+export async function getUserById(userId: string): Promise<UserRecord | undefined> {
+  if (useMemoryStore()) {
+    return usersMemory.get(userId);
+  }
+
+  const result = await getDocClient().send(
+    new GetCommand({
+      TableName: USERS_TABLE,
+      Key: { userId },
+    })
+  );
+  return result.Item as UserRecord | undefined;
+}
+
+export async function getUserByEmail(email: string): Promise<UserRecord | undefined> {
+  const normalized = email.trim().toLowerCase();
+  if (useMemoryStore()) {
+    const userId = usersByEmailMemory.get(normalized);
+    if (!userId) return undefined;
+    return usersMemory.get(userId);
+  }
+
+  const result = await getDocClient().send(
+    new QueryCommand({
+      TableName: USERS_TABLE,
+      IndexName: USERS_EMAIL_INDEX_NAME,
+      KeyConditionExpression: 'email = :email',
+      ExpressionAttributeValues: { ':email': normalized },
+      Limit: 1,
+    })
+  );
+  return (result.Items?.[0] as UserRecord | undefined) ?? undefined;
 }
