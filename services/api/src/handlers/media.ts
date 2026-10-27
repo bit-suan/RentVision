@@ -104,6 +104,7 @@ async function handleGenerateUploadUrl(
     return errorResponse('VALIDATION_ERROR', 'listingId is required', 400);
   }
 
+
   // Authorization check: User must own the listing to upload media to it
   const listing = await getListing(listingId);
   if (!listing) {

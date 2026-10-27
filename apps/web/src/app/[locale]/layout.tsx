@@ -7,6 +7,7 @@ import { routing, type Locale } from "@/i18n/routing";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import I18nProvider from "@/components/i18n/I18nProvider";
+import { AuthProvider } from "@/lib/AuthContext";
 import "../globals.css";
 
 export const instant = false;

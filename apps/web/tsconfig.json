@@ -27,7 +27,11 @@
       "@/*": [
         "./src/*"
       ]
-    }
+    },
+    "types": [
+      "jest",
+      "node"
+    ]
   },
   "include": [
     "next-env.d.ts",
@@ -41,5 +45,6 @@
     "node_modules",
     "src/**/*.test.ts",
     "src/**/*.test.tsx"
+    "src/lib/AuthContext.test.tsx"
   ]
 }

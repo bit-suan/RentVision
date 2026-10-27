@@ -135,13 +135,12 @@ export default function PropertySearchControls({
             { label: t("sortPriceDesc"), value: "price-desc" },
           ]}
         />
+        <div className="property-filter-grid__clear">
+          <Button onClick={clearFilters} type="button" variant="quiet">
+            {t("clearFilters")}
+          </Button>
+        </div>
       </fieldset>
-
-      <div className="property-search-panel__actions">
-        <Button onClick={clearFilters} type="button" variant="quiet">
-          {t("clearFilters")}
-        </Button>
-      </div>
     </form>
   );
 }
