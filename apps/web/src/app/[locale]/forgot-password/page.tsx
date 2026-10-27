@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
+import Image from "next/image";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 
@@ -35,6 +36,9 @@ export default function ForgotPasswordPage() {
   return (
     <main className="page auth-page">
       <div className="auth-card">
+        <div style={{ textAlign: "center", marginBottom: 16 }}>
+          <Image alt="RentVision" height={56} src="/images/rentvision-logo.png" style={{ height: 56, width: 56 }} width={56} />
+        </div>
         <h1>Forgot Password</h1>
         <p className="muted">Enter your email to receive a reset code</p>
 

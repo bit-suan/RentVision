@@ -2,7 +2,7 @@ import { Link } from "@/i18n/routing";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import Spinner from "./Spinner";
 
-type ButtonVariant = "primary" | "secondary" | "quiet";
+type ButtonVariant = "primary" | "secondary" | "outline" | "destructive" | "quiet";
 
 interface ButtonStyleProps {
   children: ReactNode;

@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/AuthContext";
+import Image from "next/image";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Spinner from "@/components/ui/Spinner";
@@ -11,7 +12,7 @@ import Spinner from "@/components/ui/Spinner";
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { signIn } = useAuth();
+  const { isLocalDev, signIn } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -42,6 +43,9 @@ function LoginContent() {
   return (
     <main className="page auth-page">
       <div className="auth-card">
+        <div style={{ textAlign: "center", marginBottom: 16 }}>
+          <Image alt="RentVision" height={56} src="/images/rentvision-logo.png" style={{ height: 56, width: 56 }} width={56} />
+        </div>
         <h1>Welcome Back</h1>
         <p className="muted">Log in to your RentVision account</p>
 
@@ -50,6 +54,12 @@ function LoginContent() {
         )}
         {justReset && (
           <p className="success">Password reset successfully. Please log in.</p>
+        )}
+        {isLocalDev && (
+          <p className="muted">
+            Local development mode: any email and password signs you in as the
+            demo landlord. Cognito is not configured.
+          </p>
         )}
 
         <form onSubmit={handleSubmit} className="auth-form">

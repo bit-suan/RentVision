@@ -1,6 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Header from "@/components/layout/Header";
+import LocaleHtmlLang from "@/components/layout/LocaleHtmlLang";
 import Footer from "@/components/layout/Footer";
+import RentVisionAssistant from "@/components/ai-assistant/RentVisionAssistant";
 import { routing, type Locale } from "@/i18n/routing";
 import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
@@ -13,6 +15,12 @@ export const instant = false;
 export const metadata: Metadata = {
   title: "RentVision",
   description: "AI-powered rental discovery and trust platform",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  interactiveWidget: "resizes-content",
 };
 
 export function generateStaticParams() {
@@ -43,18 +51,18 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale}>
-      <body className="app-body" data-locale={locale}>
-        <AuthProvider>
-          <I18nProvider
-            locale={locale}
-            messages={messages}
-            fallbackMessages={fallbackMessages}
-          >
-            <Header />
-            <main className="site-main">{children}</main>
-            <Footer />
-          </I18nProvider>
-        </AuthProvider>
+      <body className="app-body" data-locale={locale} suppressHydrationWarning>
+        <I18nProvider
+          locale={locale}
+          messages={messages}
+          fallbackMessages={fallbackMessages}
+        >
+          <LocaleHtmlLang locale={locale} />
+          <Header />
+          <main className="site-main">{children}</main>
+          <Footer />
+          <RentVisionAssistant />
+        </I18nProvider>
       </body>
     </html>
   );

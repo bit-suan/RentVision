@@ -1,5 +1,6 @@
 import { Link } from "@/i18n/routing";
 import { useTranslations } from "next-intl";
+import Image from "next/image";
 
 const contactPhone = "+251 XX XXX XXXX";
 const contactEmail = "hello@rentvision.com";
@@ -39,12 +40,25 @@ export default function Footer() {
         <div className="site-footer__landing">
           <div className="site-footer__main">
             <div className="site-footer__identity">
-              <p className="site-footer__brand">RentVision</p>
+              <Link aria-label="RentVision home" className="site-brand" href="/">
+                <Image
+                  alt="RentVision"
+                  className="site-brand__logo"
+                  height={32}
+                  src="/images/rentvision-logo.png"
+                  width={32}
+                />
+                <span className="site-brand__wordmark">
+                  <span className="site-brand__rent">Rent</span>
+                  <span className="site-brand__vision">Vision</span>
+                </span>
+              </Link>
               <p className="site-footer__tagline">{t("tagline")}</p>
               <nav aria-label={t("navAria")} className="site-footer__nav">
                 <Link href="/">{t("home")}</Link>
                 <Link href="/properties">{t("properties")}</Link>
                 <Link href="/map">{t("map")}</Link>
+                <Link href="/">{t("contact")}</Link>
               </nav>
             </div>
 
