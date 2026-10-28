@@ -63,6 +63,35 @@ describe('listings handler', () => {
     expect(fetched.statusCode).toBe(200);
   });
 
+  test('lists only the authenticated landlord listings', async () => {
+    const created = await handler(
+      event('POST', '/listings', undefined, {
+        title: 'My portfolio listing',
+        description: 'Owned by the authenticated landlord.',
+        price: 24000,
+        propertyType: 'apartment',
+        latitude: 9.01,
+        longitude: 38.76,
+      })
+    );
+    expect(created.statusCode).toBe(201);
+
+    const result = await handler(event('GET', '/listings/mine'));
+    expect(result.statusCode).toBe(200);
+    const body = JSON.parse(result.body);
+    expect(body.data.items).toHaveLength(1);
+    expect(body.data.items[0].title).toBe('My portfolio listing');
+    expect(body.data.items[0].landlordId).toBe('landlord-test');
+  });
+
+  test('rejects unauthenticated portfolio access', async () => {
+    const result = await handler({
+      ...event('GET', '/listings/mine'),
+      headers: {},
+    } as APIGatewayProxyEvent);
+    expect(result.statusCode).toBe(401);
+  });
+
   test('radius search around Kirkos returns nearby homes', async () => {
     const result = await handler(
       event('GET', '/listings/search', {

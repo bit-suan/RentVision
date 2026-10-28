@@ -102,6 +102,7 @@ rentvision/
 ├── .github/
 │   └── workflows/           # Continuous Integration and deployment workflow definitions
 ├── .env.example             # Safe placeholder configuration template
+├── render.yaml              # Optional Render Blueprint (three-service demo deployment)
 ├── .gitignore               # Exclusions for dependencies, build artifacts, and secrets
 └── README.md                # Project documentation
 ```
@@ -206,6 +207,9 @@ Application configuration is managed through environment variables. The `.env.ex
   - `S3_PROPERTY_MEDIA_BUCKET`, `S3_LEASE_DOCUMENTS_BUCKET`
 - **AI Service**:
   - `AI_SERVICE_HOST`, `AI_SERVICE_PORT`, `MAX_DOCUMENT_UPLOAD_MB`
+- **Render Blueprint** (set automatically by `render.yaml`):
+  - `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_AUTH_MODE`, `API_INTERNAL_URL`, `RENTVISION_AI_BASE_URL`
+  - `DATA_STORE`, `API_LOCAL_MODE`, `AUTH_TOKEN_SECRET`
 
 Copy `.env.example` to `.env` or `.env.local` for local development. Never commit real credentials, access keys, or secret tokens to version control.
 
@@ -249,7 +253,7 @@ npx cdk diff
 
 ## 10. Deployment
 
-The production deployment strategy relies on AWS Cloud Development Kit (CDK) for repeatable infrastructure provisioning:
+The primary production deployment strategy relies on AWS Cloud Development Kit (CDK) for repeatable infrastructure provisioning:
 
 1. **Prerequisites for Deployment**:
    - An active AWS account with administrative permissions for IAM, CloudFormation, DynamoDB, S3, API Gateway, and Lambda.
@@ -265,6 +269,22 @@ The production deployment strategy relies on AWS Cloud Development Kit (CDK) for
 4. **Current Status**:
    - Infrastructure definitions and resource stacks are in their initial staging phase.
    - Automated deployment pipelines and live AWS provisioning will be activated once service endpoints and data models are implemented.
+
+### Render Blueprint (optional demo deployment)
+
+The repository also includes [`render.yaml`](render.yaml) for a self-contained public demo on [Render](https://render.com). This path does not require AWS; it deploys three free-tier web services in the `frankfurt` region:
+
+- `rentvision-web` — Next.js frontend and the only browser-facing origin.
+- `rentvision-api` — Node/TypeScript API using the in-memory demo store.
+- `rentvision-ai` — FastAPI AI, extraction, and lease-Q&A service.
+
+Next.js proxies `/api/v1/*` and assistant traffic to the API and AI services over Render's private network, so the browser does not need direct API/AI URLs. The demo uses signed API session tokens instead of Cognito, and `API_LOCAL_MODE=false` prevents identity-header spoofing.
+
+To deploy, push the repository to GitHub or GitLab, then choose **New +** → **Blueprint** in the Render Dashboard and select the repository. Optionally provide `GEMINI_API_KEY` when prompted; without it, extraction uses the deterministic mock client and general assistant chat reports `not_configured` rather than fabricating an answer.
+
+The in-memory store resets on restarts, redeploys, and free-tier spin-downs; no persistent disk or database is provisioned. Use the AWS CDK path above when durable data or Cognito is required.
+
+See [docs/deployment-render.md](docs/deployment-render.md) for service configuration, authentication behavior, data limits, verification commands, and troubleshooting. The Render Blueprint is additive and does not change the AWS CDK stack or local development workflow.
 
 ---
 

@@ -49,7 +49,7 @@ function EyeOffIcon() {
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { isLocalDev, signIn } = useAuth();
+  const { signIn } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -71,6 +71,15 @@ function LoginContent() {
       await signIn({ username: email, password });
       router.push(redirectPath);
     } catch (err: unknown) {
+      if (
+        err instanceof Error &&
+        (err.name === "UserNotConfirmedException" ||
+          /not confirmed/i.test(err.message))
+      ) {
+        router.push(`/verify?email=${encodeURIComponent(email)}`);
+        return;
+      }
+
       const message =
         err instanceof Error ? err.message : "Failed to sign in. Please check your credentials.";
       setError(message);
@@ -93,6 +102,10 @@ function LoginContent() {
         </div>
         <h1>Welcome Back</h1>
         <p className="muted">Log in to your RentVision account</p>
+
+        {justVerified && (
+          <p className="success">Email verified successfully. Please log in.</p>
+        )}
 
         {justReset && (
           <p className="success">Password reset successfully. Please log in.</p>

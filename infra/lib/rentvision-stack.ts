@@ -49,7 +49,9 @@ export class RentVisionStack extends cdk.Stack {
     const environment = props?.environment ?? 'dev';
     const corsOrigins = environment === 'dev'
       ? ['http://localhost:3000', 'http://localhost:3001']
-      : ['https://rentvision.example.com']; // Replace with actual production domain
+      : (process.env.CORS_ALLOWED_ORIGINS
+          ? process.env.CORS_ALLOWED_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean)
+          : ['https://rentvision.example.com']); // Replace with actual production domain
 
     // -------------------------------------------------------------------------
     // DynamoDB Tables
@@ -93,6 +95,7 @@ export class RentVisionStack extends cdk.Stack {
       userPoolClient: this.cognito.userPoolClient,
       geoIndexName: RentVisionDynamoDb.GEO_INDEX_NAME,
       statusIndexName: RentVisionDynamoDb.STATUS_INDEX_NAME,
+      landlordIndexName: RentVisionDynamoDb.LANDLORD_INDEX_NAME,
       corsAllowedOrigins: corsOrigins,
     });
 

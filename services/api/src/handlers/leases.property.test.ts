@@ -4,6 +4,7 @@ import * as fc from 'fast-check';
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { handler } from './leases';
 import { resetMemoryStore } from '../data';
+import { loadDemoListings } from '../data/seed';
 
 function makeEvent(
   method: string,
@@ -16,7 +17,7 @@ function makeEvent(
     path,
     queryStringParameters: null,
     body: body !== undefined ? JSON.stringify(body) : null,
-    headers: {},
+    headers: { 'x-user-id': 'tenant-1' },
     pathParameters: pathParams ?? null,
     resource: path,
     isBase64Encoded: false,
@@ -24,7 +25,11 @@ function makeEvent(
 }
 
 // Arbitraries for valid lease upload fields
-const listingIdArb = fc.string({ minLength: 1, maxLength: 40 });
+const listingIdArb = fc.constantFrom(
+  'listing-bole-loft',
+  'listing-kirkos-flat',
+  'listing-yeka-villa'
+);
 const fileNameArb = fc
   .string({ minLength: 1, maxLength: 60 })
   .map((s) => s.replace(/[^a-zA-Z0-9._-]/g, 'x') + '.pdf');
@@ -55,6 +60,7 @@ describe('Leases Handler Property Tests', () => {
     await fc.assert(
       fc.asyncProperty(validLeaseUploadArb, async (payload) => {
         resetMemoryStore();
+        loadDemoListings();
 
         const uploadRes = await handler(
           makeEvent('POST', '/leases/upload-url', payload)

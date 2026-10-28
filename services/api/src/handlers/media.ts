@@ -4,6 +4,7 @@ import { errorResponse, successResponse, createResponse } from '../utils/respons
 import { getActor } from '../utils/request-actor';
 import { requireUser, canModifyListing } from '../utils/auth';
 import {
+  ListingStatus,
   MediaType,
   PresignedUrlRequest,
   PresignedUrlResponse,
@@ -151,7 +152,6 @@ async function handleGenerateDownloadUrl(
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> {
   const actor = getActor(event);
-  requireUser(actor);
 
   const queryParams = event.queryStringParameters || {};
   const fileKey = queryParams.fileKey || queryParams.key;
@@ -160,8 +160,28 @@ async function handleGenerateDownloadUrl(
     return errorResponse('VALIDATION_ERROR', 'Query parameter fileKey is required', 400);
   }
 
-  // Basic authorization: user must be authenticated to download media
-  // (In a more restrictive setup, we might check if they have access to the specific listing)
+  // Only media that belongs to a listing can be signed, and non-approved
+  // listings are only visible to their owner or an admin. Approved listing
+  // media is intentionally public for anonymous property browsing.
+  const match = /^listings\/([^/]+)\//.exec(fileKey);
+  if (!match) {
+    return errorResponse(
+      'INVALID_FILE_KEY',
+      'fileKey must reference a listing media object',
+      400
+    );
+  }
+
+  const listing = await getListing(match[1]);
+  if (!listing) {
+    return errorResponse('NOT_FOUND', 'Listing not found', 404);
+  }
+  if (
+    listing.status !== ListingStatus.APPROVED &&
+    !canModifyListing(listing.landlordId, actor)
+  ) {
+    return errorResponse('NOT_FOUND', 'Media not found', 404);
+  }
 
   const expiresIn = 60 * 60;
   const downloadUrl = await createDownloadUrl(fileKey, expiresIn);

@@ -9,7 +9,9 @@ import {
   LeaseUploadRequest,
   LeaseUploadResponse,
 } from '../types';
-import { createUploadUrl, getLease, putLease } from '../data';
+import { createUploadUrl, getLease, getListing, putLease } from '../data';
+import { getActor } from '../utils/request-actor';
+import { canModifyListing, isAdmin, requireUser } from '../utils/auth';
 
 const AI_SERVICE_HOST = process.env.AI_SERVICE_HOST || '127.0.0.1';
 const AI_SERVICE_PORT = process.env.AI_SERVICE_PORT || '8000';
@@ -73,7 +75,7 @@ export const handler = async (
         pathParamId)
     ) {
       const leaseId = pathParamId || segments[1];
-      return await handleGetLease(leaseId);
+      return await handleGetLease(leaseId, event);
     }
 
     return errorResponse(
@@ -81,7 +83,13 @@ export const handler = async (
       `Resource not found for ${method} /${segments.join('/')}`,
       404
     );
-  } catch (err: unknown) {
+  } catch (err: any) {
+    if (err.code === 'UNAUTHENTICATED') {
+      return errorResponse('UNAUTHENTICATED', err.message, 401);
+    }
+    if (err.code === 'UNAUTHORIZED') {
+      return errorResponse('UNAUTHORIZED', err.message, 403);
+    }
     const message = err instanceof Error ? err.message : 'Internal server error';
     console.error('Unhandled error in leases handler:', err);
     return errorResponse('INTERNAL_ERROR', message, 500);
@@ -102,10 +110,18 @@ async function handleGenerateUploadUrl(
     return errorResponse('VALIDATION_ERROR', 'Invalid JSON payload', 400);
   }
 
-  const { listingId, fileName, mimeType, fileSize, uploadedBy } = body;
+  const { listingId, fileName, mimeType, fileSize } = body;
+
+  const actor = getActor(event);
+  const userId = requireUser(actor);
 
   if (!listingId || typeof listingId !== 'string') {
     return errorResponse('VALIDATION_ERROR', 'listingId is required', 400);
+  }
+
+  const listing = await getListing(listingId);
+  if (!listing) {
+    return errorResponse('NOT_FOUND', 'Listing not found', 404);
   }
   if (!fileName || typeof fileName !== 'string') {
     return errorResponse('VALIDATION_ERROR', 'fileName is required', 400);
@@ -152,7 +168,7 @@ async function handleGenerateUploadUrl(
     fileSize,
     mimeType: 'application/pdf',
     status: 'uploaded',
-    uploadedBy: uploadedBy || 'anonymous',
+    uploadedBy: userId,
     createdAt,
     updatedAt: createdAt,
   };
@@ -168,17 +184,39 @@ async function handleGenerateUploadUrl(
   return successResponse(response, 201);
 }
 
-async function handleGetLease(leaseId: string): Promise<APIGatewayProxyResult> {
+async function handleGetLease(
+  leaseId: string,
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> {
   if (!leaseId) {
     return errorResponse('VALIDATION_ERROR', 'Lease ID is required', 400);
   }
+
+  const actor = getActor(event);
+  requireUser(actor);
 
   const item = await getLease(leaseId);
   if (!item) {
     return errorResponse('NOT_FOUND', `Lease with ID '${leaseId}' not found`, 404);
   }
 
+  if (!(await canAccessLease(item, event))) {
+    return errorResponse('UNAUTHORIZED', 'Not authorized to view this lease', 403);
+  }
+
   return successResponse(item);
+}
+
+async function canAccessLease(
+  lease: Lease,
+  event: APIGatewayProxyEvent
+): Promise<boolean> {
+  const actor = getActor(event);
+  if (!actor.userId) return false;
+  if (lease.uploadedBy === actor.userId || isAdmin(actor)) return true;
+
+  const listing = await getListing(lease.listingId);
+  return Boolean(listing && canModifyListing(listing.landlordId, actor));
 }
 
 function queryAiService(
@@ -276,6 +314,10 @@ async function handleLeaseQA(
   const lease = await getLease(leaseId);
   if (!lease) {
     return errorResponse('NOT_FOUND', `Lease with ID '${leaseId}' not found`, 404);
+  }
+
+  if (!(await canAccessLease(lease, event))) {
+    return errorResponse('UNAUTHORIZED', 'Not authorized to access this lease', 403);
   }
 
   const aiResult = await queryAiService(

@@ -32,5 +32,7 @@ export declare class RentVisionDynamoDb extends Construct {
     static readonly GEO_INDEX_NAME = "geoIndex";
     /** Name of the status GSI on the properties table. */
     static readonly STATUS_INDEX_NAME = "statusIndex";
+    /** Name of the landlord GSI on the properties table. */
+    static readonly LANDLORD_INDEX_NAME = "landlordIndex";
     constructor(scope: Construct, id: string, props: RentVisionDynamoDbProps);
 }

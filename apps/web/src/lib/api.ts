@@ -94,7 +94,9 @@ async function authHeaders(): Promise<Record<string, string>> {
 
   try {
     const session = await fetchAuthSession();
-    const token = session.tokens?.accessToken?.toString();
+    // API Gateway HTTP API JWT authorizers validate the `aud` claim, which is
+    // present on Cognito ID tokens (access tokens carry `client_id` instead).
+    const token = session.tokens?.idToken?.toString();
     if (token) {
       headers.Authorization = `Bearer ${token}`;
     }
@@ -104,7 +106,12 @@ async function authHeaders(): Promise<Record<string, string>> {
 
   if (!headers.Authorization && hasLocalAuthSession()) {
     const sessionUser = getLocalSessionUser();
-    if (sessionUser?.userId) {
+    if (sessionUser?.token) {
+      // API-backed auth mode returns an HMAC-signed session token. Send it as
+      // a bearer token so the API can verify the caller without trusting
+      // spoofable identity headers.
+      headers.Authorization = `Bearer ${sessionUser.token}`;
+    } else if (sessionUser?.userId) {
       headers["x-user-id"] = sessionUser.userId;
       if (sessionUser.role) {
         headers["x-user-role"] = sessionUser.role;

@@ -1,3 +1,5 @@
+process.env.DATA_STORE = "memory";
+
 import type {
   APIGatewayProxyEvent,
   APIGatewayProxyHandler,

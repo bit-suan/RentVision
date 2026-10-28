@@ -2,6 +2,8 @@ process.env.DATA_STORE = 'memory';
 
 import { APIGatewayProxyEvent } from 'aws-lambda';
 import { handler } from './leases';
+import { resetMemoryStore } from '../data';
+import { loadDemoListings } from '../data/seed';
 
 function event(
   method: string,
@@ -15,7 +17,7 @@ function event(
     path,
     queryStringParameters: query ?? null,
     body: body ? JSON.stringify(body) : null,
-    headers: {},
+    headers: { 'x-user-id': 'tenant-1' },
     pathParameters: pathParameters ?? null,
     resource: path,
     isBase64Encoded: false,
@@ -23,6 +25,11 @@ function event(
 }
 
 describe('leases handler', () => {
+  beforeEach(() => {
+    resetMemoryStore();
+    loadDemoListings();
+  });
+
   test('creates a lease upload record', async () => {
     const result = await handler(
       event('POST', '/leases/upload-url', undefined, {

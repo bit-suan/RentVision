@@ -1,7 +1,9 @@
 import * as apigatewayv2 from 'aws-cdk-lib/aws-apigatewayv2';
+import * as apigatewayv2Authorizers from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import * as lambdaNodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as cognito from 'aws-cdk-lib/aws-cognito';
 import { Construct } from 'constructs';
 /**
  * Properties for the RentVision API construct.
@@ -19,10 +21,16 @@ export interface RentVisionApiProps {
     readonly mediaBucket: s3.Bucket;
     /** S3 lease documents bucket. */
     readonly leaseDocsBucket: s3.Bucket;
+    /** Cognito user pool. */
+    readonly userPool: cognito.UserPool;
+    /** Cognito user pool client. */
+    readonly userPoolClient: cognito.UserPoolClient;
     /** Name of the geospatial GSI on the properties table. */
     readonly geoIndexName: string;
     /** Name of the status GSI on the properties table. */
     readonly statusIndexName: string;
+    /** Name of the landlord GSI on the properties table. */
+    readonly landlordIndexName: string;
     /** Allowed CORS origins. */
     readonly corsAllowedOrigins: string[];
     /** AI service host for lease Q&A integration. */
@@ -35,7 +43,7 @@ export interface RentVisionApiProps {
  * for the RentVision backend.
  *
  * Architecture:
- *   - HTTP API (API Gateway v2) with CORS
+ *   - HTTP API (API Gateway v2) with CORS and JWT Authorizer
  *   - Lambda functions for listings, media, and leases
  *   - Each Lambda has a least-privilege IAM role
  *   - CloudWatch log groups with 14-day retention
@@ -46,11 +54,15 @@ export interface RentVisionApiProps {
 export declare class RentVisionApi extends Construct {
     /** The HTTP API Gateway. */
     readonly httpApi: apigatewayv2.HttpApi;
+    /** The Cognito JWT Authorizer. */
+    readonly authorizer: apigatewayv2Authorizers.HttpJwtAuthorizer;
     /** Lambda function for listings CRUD and geospatial search. */
     readonly listingsHandler: lambdaNodejs.NodejsFunction;
     /** Lambda function for media presigned URL generation. */
     readonly mediaHandler: lambdaNodejs.NodejsFunction;
     /** Lambda function for lease management and AI Q&A. */
     readonly leaseHandler: lambdaNodejs.NodejsFunction;
+    /** Lambda function for health check. */
+    readonly healthHandler: lambdaNodejs.NodejsFunction;
     constructor(scope: Construct, id: string, props: RentVisionApiProps);
 }

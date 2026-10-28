@@ -69,6 +69,7 @@ export class RentVisionCognito extends Construct {
       userPoolClientName: `rentvision-web-client-${props.environment}`,
       authFlows: {
         userPassword: true,
+        userSrp: true,
       },
     });
 

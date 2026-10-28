@@ -46,7 +46,7 @@ function EyeOffIcon() {
 
 export default function SignUpPage() {
   const router = useRouter();
-  const { signUp, signIn, isLocalDev } = useAuth();
+  const { signUp, isLocalDev } = useAuth();
 
   const [givenName, setGivenName] = useState("");
   const [familyName, setFamilyName] = useState("");
@@ -65,8 +65,16 @@ export default function SignUpPage() {
       return;
     }
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+    if (
+      password.length < 8 ||
+      !/[a-z]/.test(password) ||
+      !/[A-Z]/.test(password) ||
+      !/[0-9]/.test(password) ||
+      !/[^A-Za-z0-9]/.test(password)
+    ) {
+      setError(
+        "Password must be at least 8 characters and include uppercase, lowercase, a number, and a symbol."
+      );
       return;
     }
 
@@ -86,15 +94,14 @@ export default function SignUpPage() {
         },
       });
 
-      // Automatically sign in without requiring email verification
-      try {
-        await signIn({ username: email, password });
-      } catch (signInErr) {
-        console.warn("Auto sign-in fallback:", signInErr);
+      if (isLocalDev) {
+        // Local development creates and signs in the demo session directly.
+        router.push("/");
+        return;
       }
 
-      // Smoothly navigate directly to home
-      router.push("/");
+      // Cognito sends a verification code before the account can sign in.
+      router.push(`/verify?email=${encodeURIComponent(email)}`);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Failed to sign up. Please try again.";

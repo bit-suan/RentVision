@@ -5,6 +5,7 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
+    "start": "node dist/services/api/src/local-server.js",
     "test": "jest",
     "start:local": "ts-node --transpile-only src/local-server.ts"
   },

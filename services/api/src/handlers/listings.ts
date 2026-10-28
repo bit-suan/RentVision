@@ -19,6 +19,7 @@ import {
   createDownloadUrl,
   getListing,
   listActiveListings,
+  listListingsByLandlord,
   putListing,
   queryListingsByGeohash,
 } from '../data';
@@ -62,6 +63,15 @@ export const handler = async (
         event.resource === '/listings/search')
     ) {
       return await handleGeoSearch(event);
+    }
+
+    if (
+      method === 'GET' &&
+      segments.length === 2 &&
+      segments[0] === 'listings' &&
+      segments[1] === 'mine'
+    ) {
+      return await handleListMyListings(event);
     }
 
     if (
@@ -211,7 +221,12 @@ async function handleUpdateListing(
     return errorResponse('UNAUTHORIZED', 'Not authorized to update this listing', 403);
   }
 
-  if (updates.panorama !== undefined) {
+  const validationError = validateListingUpdates(updates, listingId);
+  if (validationError) {
+    return errorResponse('VALIDATION_ERROR', validationError, 400);
+  }
+
+  if (updates.panorama !== undefined && updates.panorama !== null) {
     try {
       validatePanorama(updates.panorama, listingId);
     } catch (error) {
@@ -223,19 +238,163 @@ async function handleUpdateListing(
     }
   }
 
+  // Only whitelisted fields are copied. Ownership, status, timestamps, and
+  // the listing ID are always taken from the stored record.
   const updatedListing: Listing = {
     ...listing,
-    ...updates,
-    listingId, // Ensure ID cannot be changed
-    panoramaKeys:
-      updates.panorama !== undefined
-        ? updates.panorama.scenes.map((scene) => scene.s3Key)
-        : listing.panoramaKeys,
+    title: updates.title ?? listing.title,
+    description: updates.description ?? listing.description,
+    price: updates.price ?? listing.price,
+    currency: updates.currency ?? listing.currency,
+    propertyType: updates.propertyType ?? listing.propertyType,
+    latitude: updates.latitude ?? listing.latitude,
+    longitude: updates.longitude ?? listing.longitude,
+    address: updates.address ?? listing.address,
+    bedrooms: updates.bedrooms ?? listing.bedrooms,
+    bathrooms: updates.bathrooms ?? listing.bathrooms,
+    areaSqm: updates.areaSqm ?? listing.areaSqm,
+    amenities: updates.amenities ?? listing.amenities,
+    mediaKeys: updates.mediaKeys ?? listing.mediaKeys,
+    listingId,
+    landlordId: listing.landlordId,
+    status: listing.status,
+    createdAt: listing.createdAt,
     updatedAt: new Date().toISOString(),
   };
 
+  if (updates.latitude !== undefined || updates.longitude !== undefined) {
+    updatedListing.geohash = encodeGeohash(
+      updatedListing.latitude,
+      updatedListing.longitude,
+      5
+    );
+  }
+
+  if (updates.panorama === null) {
+    delete updatedListing.panorama;
+    updatedListing.panoramaKeys = [];
+  } else if (updates.panorama !== undefined) {
+    updatedListing.panorama = updates.panorama;
+    updatedListing.panoramaKeys = updates.panorama.scenes.map(
+      (scene) => scene.s3Key
+    );
+  }
+
   await putListing(updatedListing);
   return successResponse(updatedListing);
+}
+
+function validateListingUpdates(
+  updates: UpdateListingRequest,
+  listingId: string
+): string | null {
+  if (
+    updates.title !== undefined &&
+    (typeof updates.title !== 'string' || !updates.title.trim())
+  ) {
+    return 'title must be a non-empty string';
+  }
+  if (
+    updates.description !== undefined &&
+    (typeof updates.description !== 'string' || !updates.description.trim())
+  ) {
+    return 'description must be a non-empty string';
+  }
+  if (
+    updates.price !== undefined &&
+    (typeof updates.price !== 'number' ||
+      !Number.isFinite(updates.price) ||
+      updates.price < 0)
+  ) {
+    return 'price must be a non-negative number';
+  }
+  if (
+    updates.currency !== undefined &&
+    updates.currency !== 'ETB' &&
+    updates.currency !== 'USD'
+  ) {
+    return 'currency must be ETB or USD';
+  }
+  if (
+    updates.propertyType !== undefined &&
+    !Object.values(PropertyType).includes(updates.propertyType)
+  ) {
+    return 'propertyType is invalid';
+  }
+  if (
+    updates.latitude !== undefined &&
+    (typeof updates.latitude !== 'number' ||
+      !Number.isFinite(updates.latitude) ||
+      updates.latitude < -90 ||
+      updates.latitude > 90)
+  ) {
+    return 'latitude must be between -90 and 90';
+  }
+  if (
+    updates.longitude !== undefined &&
+    (typeof updates.longitude !== 'number' ||
+      !Number.isFinite(updates.longitude) ||
+      updates.longitude < -180 ||
+      updates.longitude > 180)
+  ) {
+    return 'longitude must be between -180 and 180';
+  }
+  if (
+    updates.bedrooms !== undefined &&
+    (typeof updates.bedrooms !== 'number' ||
+      !Number.isInteger(updates.bedrooms) ||
+      updates.bedrooms < 0)
+  ) {
+    return 'bedrooms must be a non-negative integer';
+  }
+  if (
+    updates.bathrooms !== undefined &&
+    (typeof updates.bathrooms !== 'number' ||
+      !Number.isInteger(updates.bathrooms) ||
+      updates.bathrooms < 0)
+  ) {
+    return 'bathrooms must be a non-negative integer';
+  }
+  if (
+    updates.areaSqm !== undefined &&
+    (typeof updates.areaSqm !== 'number' ||
+      !Number.isFinite(updates.areaSqm) ||
+      updates.areaSqm < 0)
+  ) {
+    return 'areaSqm must be a non-negative number';
+  }
+  if (
+    updates.amenities !== undefined &&
+    (!Array.isArray(updates.amenities) ||
+      updates.amenities.some((amenity) => typeof amenity !== 'string'))
+  ) {
+    return 'amenities must be an array of strings';
+  }
+  if (updates.mediaKeys !== undefined) {
+    if (
+      !Array.isArray(updates.mediaKeys) ||
+      updates.mediaKeys.some(
+        (key) =>
+          typeof key !== 'string' ||
+          !key.startsWith(`listings/${listingId}/`)
+      )
+    ) {
+      return 'mediaKeys must belong to this listing';
+    }
+  }
+  if (updates.address !== undefined) {
+    const address = updates.address as unknown as Record<string, unknown>;
+    if (
+      !address ||
+      typeof address !== 'object' ||
+      ['street', 'city', 'subcity', 'woreda'].some(
+        (field) => typeof address[field] !== 'string'
+      )
+    ) {
+      return 'address must contain street, city, subcity, and woreda strings';
+    }
+  }
+  return null;
 }
 
 async function handleUpdateStatus(
@@ -340,6 +499,43 @@ async function handleAddImage(
 }
 
 
+async function handleListMyListings(
+  event: APIGatewayProxyEvent
+): Promise<APIGatewayProxyResult> {
+  const actor = getActor(event);
+  const landlordId = requireUser(actor);
+
+  const queryParams = event.queryStringParameters || {};
+  const limit = queryParams.limit ? parseInt(queryParams.limit, 10) : 50;
+
+  let exclusiveStartKey: Record<string, unknown> | undefined;
+  if (queryParams.nextToken) {
+    try {
+      exclusiveStartKey = JSON.parse(
+        Buffer.from(queryParams.nextToken, 'base64').toString('utf8')
+      );
+    } catch {
+      return errorResponse('VALIDATION_ERROR', 'Invalid nextToken parameter', 400);
+    }
+  }
+
+  const result = await listListingsByLandlord(
+    landlordId,
+    Math.min(Math.max(1, limit), 100),
+    exclusiveStartKey
+  );
+
+  const nextToken = result.lastKey
+    ? Buffer.from(JSON.stringify(result.lastKey)).toString('base64')
+    : undefined;
+
+  return successResponse({
+    items: result.items,
+    count: result.items.length,
+    nextToken,
+  });
+}
+
 async function handleListListings(
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> {
@@ -418,6 +614,71 @@ async function handleCreateListing(
     }
   }
 
+  if (typeof body.title !== 'string' || typeof body.description !== 'string') {
+    return errorResponse(
+      'VALIDATION_ERROR',
+      'title and description must be strings',
+      400
+    );
+  }
+  if (!Object.values(PropertyType).includes(body.propertyType)) {
+    return errorResponse('VALIDATION_ERROR', 'propertyType is invalid', 400);
+  }
+  if (
+    body.currency !== undefined &&
+    body.currency !== 'ETB' &&
+    body.currency !== 'USD'
+  ) {
+    return errorResponse('VALIDATION_ERROR', 'currency must be ETB or USD', 400);
+  }
+  if (
+    body.bedrooms !== undefined &&
+    (typeof body.bedrooms !== 'number' ||
+      !Number.isInteger(body.bedrooms) ||
+      body.bedrooms < 0)
+  ) {
+    return errorResponse(
+      'VALIDATION_ERROR',
+      'bedrooms must be a non-negative integer',
+      400
+    );
+  }
+  if (
+    body.bathrooms !== undefined &&
+    (typeof body.bathrooms !== 'number' ||
+      !Number.isInteger(body.bathrooms) ||
+      body.bathrooms < 0)
+  ) {
+    return errorResponse(
+      'VALIDATION_ERROR',
+      'bathrooms must be a non-negative integer',
+      400
+    );
+  }
+  if (
+    body.areaSqm !== undefined &&
+    (typeof body.areaSqm !== 'number' ||
+      !Number.isFinite(body.areaSqm) ||
+      body.areaSqm < 0)
+  ) {
+    return errorResponse(
+      'VALIDATION_ERROR',
+      'areaSqm must be a non-negative number',
+      400
+    );
+  }
+  if (
+    body.amenities !== undefined &&
+    (!Array.isArray(body.amenities) ||
+      body.amenities.some((amenity) => typeof amenity !== 'string'))
+  ) {
+    return errorResponse(
+      'VALIDATION_ERROR',
+      'amenities must be an array of strings',
+      400
+    );
+  }
+
   if (typeof body.latitude !== 'number' || body.latitude < -90 || body.latitude > 90) {
     return errorResponse(
       'VALIDATION_ERROR',
@@ -465,8 +726,10 @@ async function handleCreateListing(
     bathrooms: body.bathrooms ?? 1,
     areaSqm: body.areaSqm ?? 0,
     amenities: Array.isArray(body.amenities) ? body.amenities : [],
-    mediaKeys: Array.isArray(body.mediaKeys) ? body.mediaKeys : [],
-    panoramaKeys: Array.isArray(body.panoramaKeys) ? body.panoramaKeys : [],
+    // Media is registered only through the ownership-checked image endpoint
+    // or the validated panorama metadata below.
+    mediaKeys: [],
+    panoramaKeys: [],
     landlordId,
     createdAt,
     updatedAt: createdAt,

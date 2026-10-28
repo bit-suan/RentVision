@@ -35,6 +35,8 @@ export class RentVisionDynamoDb extends Construct {
   public static readonly GEO_INDEX_NAME = 'geoIndex';
   /** Name of the status GSI on the properties table. */
   public static readonly STATUS_INDEX_NAME = 'statusIndex';
+  /** Name of the landlord GSI on the properties table. */
+  public static readonly LANDLORD_INDEX_NAME = 'landlordIndex';
 
   constructor(scope: Construct, id: string, props: RentVisionDynamoDbProps) {
     super(scope, id);
@@ -88,6 +90,21 @@ export class RentVisionDynamoDb extends Construct {
       projectionType: dynamodb.ProjectionType.ALL,
     });
 
+    // Landlord index: lets the authenticated landlord portal list every
+    // listing owned by the caller (all statuses), newest first.
+    this.propertiesTable.addGlobalSecondaryIndex({
+      indexName: RentVisionDynamoDb.LANDLORD_INDEX_NAME,
+      partitionKey: {
+        name: 'landlordId',
+        type: dynamodb.AttributeType.STRING,
+      },
+      sortKey: {
+        name: 'createdAt',
+        type: dynamodb.AttributeType.STRING,
+      },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
+
     // -------------------------------------------------------------------------
     // Users Table
     // -------------------------------------------------------------------------
@@ -101,6 +118,16 @@ export class RentVisionDynamoDb extends Construct {
       pointInTimeRecovery: true,
       removalPolicy,
       encryption: dynamodb.TableEncryption.AWS_MANAGED,
+    });
+
+    // Email index on users table for lookup by email (used by auth handler).
+    this.usersTable.addGlobalSecondaryIndex({
+      indexName: 'emailIndex',
+      partitionKey: {
+        name: 'email',
+        type: dynamodb.AttributeType.STRING,
+      },
+      projectionType: dynamodb.ProjectionType.ALL,
     });
 
     // -------------------------------------------------------------------------

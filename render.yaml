@@ -1,0 +1,147 @@
+# ==============================================================================
+# RentVision Render Blueprint
+# ==============================================================================
+# Deploys three free-tier web services from this monorepo:
+#
+#   rentvision-web  Next.js app (public entry point)
+#   rentvision-api  Node/TypeScript API (memory-backed demo store)
+#   rentvision-ai   Python/FastAPI AI + lease document service
+#
+# Normal browser traffic only talks to rentvision-web. Next.js proxies /api/v1/*
+# to the API over Render's private network and /api/ai/chat to the AI service,
+# so neither service needs a hard-coded public URL. The API still allows direct
+# media upload/download requests, which is why it has a CORS setting below.
+#
+# Apply via: Render Dashboard -> New + -> Blueprint -> select this repository.
+# Full instructions: docs/deployment-render.md
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # API service (Node.js + TypeScript)
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: rentvision-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: cd services/api && npm ci --include=dev && npm run build
+    startCommand: cd services/api && npm start
+    healthCheckPath: /health
+    buildFilter:
+      paths:
+        - services/api/**
+        - shared/contracts/**
+        - render.yaml
+    envVars:
+      - key: NODE_VERSION
+        value: 22.22.0
+      - key: NODE_ENV
+        value: production
+      # Memory store keeps the public demo self-contained. Data resets on
+      # restart; see docs/deployment-render.md for persistence options.
+      - key: DATA_STORE
+        value: memory
+      # Keep header-based identity disabled in production. Requests are
+      # authenticated with the signed bearer token issued by /auth/login.
+      - key: API_LOCAL_MODE
+        value: "false"
+      - key: AUTH_TOKEN_SECRET
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        value: "*"
+      - key: AI_SERVICE_HOST
+        fromService:
+          name: rentvision-ai
+          type: web
+          property: host
+      - key: AI_SERVICE_PORT
+        fromService:
+          name: rentvision-ai
+          type: web
+          property: port
+
+  # ----------------------------------------------------------------------------
+  # AI service (Python + FastAPI)
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: rentvision-ai
+    runtime: python
+    plan: free
+    region: frankfurt
+    buildCommand: cd services/ai && pip install -r requirements.txt
+    startCommand: cd services/ai && uvicorn rentvision_ai.api:app --app-dir src --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    buildFilter:
+      paths:
+        - services/ai/**
+        - shared/contracts/**
+        - render.yaml
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: AI_SERVICE_ENV
+        value: production
+      - key: CORS_ALLOWED_ORIGINS
+        value: "*"
+      - key: MAX_DOCUMENT_UPLOAD_MB
+        value: "25"
+      - key: AI_MODEL_NAME
+        value: models/gemini-3.5-flash
+      # Render prompts for this value on first deploy. The service still
+      # starts without it; listing/lease extraction falls back to its
+      # deterministic mock client and the general assistant reports that it
+      # is not configured instead of fabricating an answer.
+      - key: GEMINI_API_KEY
+        sync: false
+
+  # ----------------------------------------------------------------------------
+  # Web service (Next.js, public entry point)
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: rentvision-web
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: cd apps/web && npm ci --include=dev && npm run build
+    startCommand: cd apps/web && npm run start -- -H 0.0.0.0 -p $PORT
+    healthCheckPath: /api/health
+    buildFilter:
+      paths:
+        - apps/web/**
+        - shared/contracts/**
+        - render.yaml
+    envVars:
+      - key: NODE_VERSION
+        value: 22.22.0
+      # Relative path: the browser calls this origin, and the Next.js route at
+      # src/app/api/v1/[...path]/route.ts forwards to the API service.
+      - key: NEXT_PUBLIC_API_BASE_URL
+        value: /api/v1
+      # Use the API-backed demo auth flow. This Blueprint does not provision
+      # Cognito or an API Gateway JWT authorizer; the AWS CDK stack remains the
+      # path for Cognito-authenticated deployments.
+      - key: NEXT_PUBLIC_AUTH_MODE
+        value: local
+      - key: API_INTERNAL_URL
+        fromService:
+          name: rentvision-api
+          type: web
+          property: hostport
+      - key: RENTVISION_AI_BASE_URL
+        fromService:
+          name: rentvision-ai
+          type: web
+          property: hostport
+      - key: RENTVISION_AI_CHAT_TIMEOUT_MS
+        value: "20000"
+      - key: NEXT_PUBLIC_MAP_TILE_URL
+        value: https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png
+      - key: NEXT_PUBLIC_MAP_ATTRIBUTION
+        value: "&copy; OpenStreetMap contributors"
+      - key: NEXT_PUBLIC_DEFAULT_LATITUDE
+        value: "9.010793"
+      - key: NEXT_PUBLIC_DEFAULT_LONGITUDE
+        value: "38.761252"
+      - key: NEXT_PUBLIC_DEFAULT_ZOOM
+        value: "13"

@@ -2,6 +2,8 @@ import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import crypto from 'crypto';
 import { getUserByEmail, getUserById, putUser, type UserRecord } from '../data';
 import { successResponse, errorResponse } from '../utils/response';
+import { signAuthToken } from '../utils/auth';
+import { getActor } from '../utils/request-actor';
 
 function hashPassword(password: string): string {
   const salt = crypto.randomBytes(16).toString('hex');
@@ -58,6 +60,16 @@ export const handler = async (
         return errorResponse('VALIDATION_ERROR', 'First name is required.', 400);
       }
 
+      // Admin accounts must be provisioned explicitly (seed data or direct
+      // store access). Never let a caller elevate itself via public signup.
+      if (role === 'admin') {
+        return errorResponse(
+          'FORBIDDEN',
+          'Admin accounts cannot be created through public signup.',
+          403
+        );
+      }
+
       const normalizedEmail = email.trim().toLowerCase();
       const existingUser = await getUserByEmail(normalizedEmail);
       if (existingUser) {
@@ -72,7 +84,7 @@ export const handler = async (
         passwordHash: hashPassword(password),
         givenName: givenName.trim(),
         familyName: (familyName || '').trim(),
-        role: role === 'landlord' || role === 'admin' ? role : 'user',
+        role: role === 'landlord' ? 'landlord' : 'user',
         createdAt: now,
         updatedAt: now,
       };
@@ -88,14 +100,12 @@ export const handler = async (
             familyName: userRecord.familyName,
             role: userRecord.role,
           },
-          token: Buffer.from(
-            JSON.stringify({
-              userId: userRecord.userId,
-              email: userRecord.email,
-              role: userRecord.role,
-              exp: Date.now() + 30 * 86400000,
-            })
-          ).toString('base64'),
+          token: signAuthToken({
+            userId: userRecord.userId,
+            email: userRecord.email,
+            role: userRecord.role,
+            exp: Date.now() + 30 * 86400000,
+          }),
         },
         201
       );
@@ -131,14 +141,12 @@ export const handler = async (
             familyName: user.familyName,
             role: user.role,
           },
-          token: Buffer.from(
-            JSON.stringify({
-              userId: user.userId,
-              email: user.email,
-              role: user.role,
-              exp: Date.now() + 30 * 86400000,
-            })
-          ).toString('base64'),
+          token: signAuthToken({
+            userId: user.userId,
+            email: user.email,
+            role: user.role,
+            exp: Date.now() + 30 * 86400000,
+          }),
         },
         200
       );
@@ -150,9 +158,8 @@ export const handler = async (
 
   // GET /auth/me or /api/v1/auth/me
   if (method === 'GET' && path.endsWith('/me')) {
-    const userId =
-      event.headers?.['x-user-id'] ??
-      event.headers?.['X-User-Id'];
+    const actor = getActor(event);
+    const userId = actor.userId;
 
     if (!userId) {
       return errorResponse('UNAUTHENTICATED', 'Missing user session.', 401);

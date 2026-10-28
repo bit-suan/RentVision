@@ -45,6 +45,10 @@ from rentvision_ai.exceptions import (
     LLMTimeoutError,
     PDFExtractionError,
 )
+from rentvision_ai.schemas.assistant import (
+    AssistantChatRequest,
+    AssistantChatResponse,
+)
 from rentvision_ai.schemas.document import ExtractedDocument, PDFPage
 from rentvision_ai.schemas.lease_qa import (
     EvidenceSupportStatus,
@@ -52,6 +56,7 @@ from rentvision_ai.schemas.lease_qa import (
     SourceCitation,
 )
 from rentvision_ai.schemas.property import ExtractedPropertyListing
+from rentvision_ai.services.assistant import AssistantService
 from rentvision_ai.services.lease_qa import LeaseQAService, resolve_qa_locale
 from rentvision_ai.services.listing_extraction import ListingExtractionService
 
@@ -163,11 +168,19 @@ def get_lease_qa_service() -> LeaseQAService:
     return LeaseQAService(client=client)
 
 
+def get_assistant_service() -> AssistantService:
+    client = get_default_llm_client(allow_mock_fallback=False)
+    return AssistantService(client=client, allow_mock=False)
+
+
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(
         title="RentVision AI Service",
-        description="HTTP API for property listing extraction and lease contract Q&A.",
+        description=(
+            "HTTP API for property listing extraction, lease contract Q&A, "
+            "and general rental assistance."
+        ),
         version="0.1.0",
         docs_url="/docs",
         redoc_url="/redoc",
@@ -179,10 +192,12 @@ def create_app() -> FastAPI:
         for origin in os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:3000").split(",")
         if origin.strip()
     ]
+    allow_all_origins = "*" in allowed_origins
     app.add_middleware(
         CORSMiddleware,
         allow_origins=allowed_origins or ["http://localhost:3000"],
-        allow_credentials=True,
+        # The wildcard origin cannot be combined with credentialed requests.
+        allow_credentials=not allow_all_origins,
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -343,6 +358,53 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e)) from e
         except Exception as e:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Lease QA failure: {e}") from e
+
+    @app.post(
+        "/api/v1/assistant/chat",
+        response_model=AssistantChatResponse,
+        status_code=status.HTTP_200_OK,
+        summary="Answer general rental questions",
+        tags=["Assistant"],
+    )
+    def assistant_chat(
+        payload: AssistantChatRequest,
+        raw_request: Request,
+        response: Response,
+        service: AssistantService = Depends(get_assistant_service),
+    ) -> AssistantChatResponse:
+        target_locale = resolve_locale(
+            payload_locale=payload.locale,
+            accept_language=raw_request.headers.get("accept-language"),
+        )
+        response.headers["Content-Language"] = target_locale
+
+        try:
+            return service.reply(payload, locale=target_locale)
+        except InvalidInputError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+            ) from e
+        except LLMAuthenticationError as e:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e)
+            ) from e
+        except LLMTimeoutError as e:
+            raise HTTPException(
+                status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail=str(e)
+            ) from e
+        except LLMResponseParsingError as e:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e)
+            ) from e
+        except LLMProviderError as e:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY, detail=str(e)
+            ) from e
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Assistant failure: {e}",
+            ) from e
 
     return app
 

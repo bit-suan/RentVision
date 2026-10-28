@@ -34,9 +34,20 @@ function errorResponse(
   );
 }
 
+function normalizeServiceUrl(value: string): string {
+  const trimmed = value.trim().replace(/\/+$/, "");
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`;
+}
+
 function resolveUpstreamUrl(): string | null {
   const configured = process.env.RENTVISION_AI_CHAT_URL?.trim();
-  if (configured) return configured;
+  if (configured) return normalizeServiceUrl(configured);
+
+  // Render exposes the AI service's private host:port via RENTVISION_AI_BASE_URL.
+  const serviceBase = process.env.RENTVISION_AI_BASE_URL?.trim();
+  if (serviceBase) {
+    return `${normalizeServiceUrl(serviceBase)}/api/v1/assistant/chat`;
+  }
 
   // The web app loads apps/web/.env*, not the repository-root .env. Keep a
   // development-only default so local `uvicorn` works without extra setup.

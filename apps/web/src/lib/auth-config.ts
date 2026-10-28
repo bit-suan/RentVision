@@ -43,13 +43,18 @@ export const authConfig = {
 
 /**
  * Local development auth is only enabled when Cognito is not configured and
- * the web app is pointed at a local API. Production builds use Cognito, and
- * the API only accepts the development headers in local/test mode.
+ * the web app is pointed at a local API. A deployment can explicitly opt into
+ * the same API-backed auth flow with `NEXT_PUBLIC_AUTH_MODE=local` (used by the
+ * Render Blueprint, where Cognito is not provisioned).
  */
 export function isLocalAuthMode(): boolean {
   const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || '';
   const isLocalApi = /localhost|127\.0\.0\.1/.test(apiBase);
-  return !authConfig.Cognito.userPoolId && !authConfig.Cognito.userPoolClientId && isLocalApi;
+  const explicitlyEnabled = process.env.NEXT_PUBLIC_AUTH_MODE === 'local';
+  const hasCognito =
+    Boolean(authConfig.Cognito.userPoolId) &&
+    Boolean(authConfig.Cognito.userPoolClientId);
+  return !hasCognito && (isLocalApi || explicitlyEnabled);
 }
 
 export function hasLocalAuthSession(): boolean {

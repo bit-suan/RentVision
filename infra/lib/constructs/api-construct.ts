@@ -36,6 +36,8 @@ export interface RentVisionApiProps {
   readonly geoIndexName: string;
   /** Name of the status GSI on the properties table. */
   readonly statusIndexName: string;
+  /** Name of the landlord GSI on the properties table. */
+  readonly landlordIndexName: string;
   /** Allowed CORS origins. */
   readonly corsAllowedOrigins: string[];
   /** AI service host for lease Q&A integration. */
@@ -80,7 +82,7 @@ export class RentVisionApi extends Construct {
 
     // Common Lambda configuration
     const lambdaDefaults: Partial<lambdaNodejs.NodejsFunctionProps> = {
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       architecture: lambda.Architecture.ARM_64,
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
@@ -126,6 +128,7 @@ export class RentVisionApi extends Construct {
         DYNAMODB_PROPERTIES_TABLE: props.propertiesTable.tableName,
         LISTINGS_GEO_INDEX_NAME: props.geoIndexName,
         LISTINGS_STATUS_INDEX_NAME: props.statusIndexName,
+        LISTINGS_LANDLORD_INDEX_NAME: props.landlordIndexName,
         NODE_OPTIONS: '--enable-source-maps',
       },
     });
@@ -215,6 +218,8 @@ export class RentVisionApi extends Construct {
           'X-Api-Key',
           'X-Amz-Security-Token',
           'X-Request-Id',
+          'X-User-Id',
+          'X-User-Role',
         ],
         maxAge: cdk.Duration.hours(1),
       },
@@ -269,6 +274,15 @@ export class RentVisionApi extends Construct {
       authorizer: this.authorizer,
     });
 
+    // Authenticated landlord portfolio. Registered before the parameterized
+    // route so `/listings/mine` is never treated as a listing ID.
+    this.httpApi.addRoutes({
+      path: '/listings/mine',
+      methods: [apigatewayv2.HttpMethod.GET],
+      integration: listingsIntegration,
+      authorizer: this.authorizer,
+    });
+
     this.httpApi.addRoutes({
       path: '/listings/{id}',
       methods: [apigatewayv2.HttpMethod.GET],
@@ -310,11 +324,13 @@ export class RentVisionApi extends Construct {
       authorizer: this.authorizer,
     });
 
+    // Public route: the handler only signs media for approved listings, so
+    // listing cards work for anonymous visitors while private/non-approved
+    // media stays inaccessible.
     this.httpApi.addRoutes({
       path: '/media/download-url',
       methods: [apigatewayv2.HttpMethod.GET],
       integration: mediaIntegration,
-      authorizer: this.authorizer,
     });
 
     // Lease routes

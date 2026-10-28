@@ -5,4 +5,5 @@ export * from './api';
 export * from './panorama';
 export * from './locale';
 export * from './dtos';
+export * from './assistant';
 

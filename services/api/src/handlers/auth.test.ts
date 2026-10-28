@@ -2,10 +2,23 @@ process.env.API_LOCAL_MODE = 'true';
 process.env.DATA_STORE = 'memory';
 
 import { APIGatewayProxyEvent } from 'aws-lambda';
+import { handler as authHandler } from './auth';
 import { handler as listingsHandler } from './listings';
 import { handler as mediaHandler } from './media';
 import { resetMemoryStore, putListing } from '../data';
 import { ListingStatus } from '../types';
+
+function createSignUpEvent(body: Record<string, unknown>): any {
+  return {
+    httpMethod: 'POST',
+    path: '/auth/signup',
+    pathParameters: null,
+    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json' },
+    requestContext: {},
+    isBase64Encoded: false,
+  };
+}
 
 function createJwtEvent(
   method: string,
@@ -122,5 +135,49 @@ describe('Authorization and JWT Claim parsing', () => {
     const { handler: healthHandler } = await import('./health');
     const result = await healthHandler(event);
     expect(result.statusCode).toBe(200);
+  });
+
+  test('public signup defaults to the user role', async () => {
+    const result = await authHandler(
+      createSignUpEvent({
+        email: 'default-role@example.com',
+        password: 'Password123!',
+        givenName: 'Default',
+        familyName: 'User',
+      })
+    );
+
+    expect(result.statusCode).toBe(201);
+    expect(JSON.parse(result.body).data.user.role).toBe('user');
+  });
+
+  test('public signup allows landlord accounts', async () => {
+    const result = await authHandler(
+      createSignUpEvent({
+        email: 'landlord-role@example.com',
+        password: 'Password123!',
+        givenName: 'Landlord',
+        familyName: 'User',
+        role: 'landlord',
+      })
+    );
+
+    expect(result.statusCode).toBe(201);
+    expect(JSON.parse(result.body).data.user.role).toBe('landlord');
+  });
+
+  test('public signup cannot create admin accounts', async () => {
+    const result = await authHandler(
+      createSignUpEvent({
+        email: 'admin-role@example.com',
+        password: 'Password123!',
+        givenName: 'Admin',
+        familyName: 'User',
+        role: 'admin',
+      })
+    );
+
+    expect(result.statusCode).toBe(403);
+    expect(JSON.parse(result.body).error.code).toBe('FORBIDDEN');
   });
 });

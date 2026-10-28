@@ -43,6 +43,8 @@ const GEO_INDEX_NAME =
   process.env.LISTINGS_GEO_INDEX_NAME || 'geoIndex';
 const STATUS_INDEX_NAME =
   process.env.LISTINGS_STATUS_INDEX_NAME || 'statusIndex';
+const LANDLORD_INDEX_NAME =
+  process.env.LISTINGS_LANDLORD_INDEX_NAME || 'landlordIndex';
 const MEDIA_BUCKET =
   process.env.S3_PROPERTY_MEDIA_BUCKET || 'rentvision-property-media-dev';
 const LEASE_BUCKET =
@@ -154,6 +156,45 @@ export async function listActiveListings(
   };
 }
 
+export async function listListingsByLandlord(
+  landlordId: string,
+  limit: number,
+  exclusiveStartKey?: Record<string, unknown>
+): Promise<{ items: Listing[]; lastKey?: Record<string, unknown> }> {
+  if (useMemoryStore()) {
+    const items = Array.from(listingsMemory.values())
+      .filter((item) => item.landlordId === landlordId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const start = exclusiveStartKey?.offset
+      ? Number(exclusiveStartKey.offset)
+      : 0;
+    const page = items.slice(start, start + limit);
+    const nextOffset = start + page.length;
+    return {
+      items: page,
+      lastKey:
+        nextOffset < items.length ? { offset: nextOffset } : undefined,
+    };
+  }
+
+  const result = await getDocClient().send(
+    new QueryCommand({
+      TableName: PROPERTIES_TABLE,
+      IndexName: LANDLORD_INDEX_NAME,
+      KeyConditionExpression: 'landlordId = :landlordId',
+      ExpressionAttributeValues: { ':landlordId': landlordId },
+      ScanIndexForward: false,
+      Limit: limit,
+      ExclusiveStartKey: exclusiveStartKey,
+    })
+  );
+
+  return {
+    items: (result.Items || []) as Listing[],
+    lastKey: result.LastEvaluatedKey,
+  };
+}
+
 export async function queryListingsByGeohash(geohash: string): Promise<Listing[]> {
   if (useMemoryStore()) {
     return Array.from(listingsMemory.values()).filter(
@@ -203,6 +244,15 @@ export async function getLease(leaseId: string): Promise<Lease | undefined> {
   return (result.Items?.[0] as Lease | undefined) ?? undefined;
 }
 
+function getPublicBaseUrl(): string {
+  const configured =
+    process.env.API_PUBLIC_BASE_URL || process.env.RENDER_EXTERNAL_URL;
+  if (configured) {
+    return configured.replace(/\/+$/, '');
+  }
+  return `http://localhost:${process.env.PORT || process.env.API_PORT || 3001}`;
+}
+
 export async function createUploadUrl(
   bucket: 'media' | 'leases',
   fileKey: string,
@@ -210,9 +260,7 @@ export async function createUploadUrl(
   expiresIn: number
 ): Promise<string> {
   if (useMemoryStore()) {
-    const localBase =
-      process.env.API_PUBLIC_BASE_URL || 'http://localhost:3001';
-    return `${localBase}/local-upload/${bucket}/${encodeURIComponent(fileKey)}`;
+    return `${getPublicBaseUrl()}/local-upload/${bucket}/${encodeURIComponent(fileKey)}`;
   }
 
   const bucketName = bucket === 'media' ? MEDIA_BUCKET : LEASE_BUCKET;
@@ -232,9 +280,7 @@ export async function createDownloadUrl(
   expiresIn: number
 ): Promise<string> {
   if (useMemoryStore()) {
-    const localBase =
-      process.env.API_PUBLIC_BASE_URL || 'http://localhost:3001';
-    return `${localBase}/local-objects/${encodeURIComponent(fileKey)}`;
+    return `${getPublicBaseUrl()}/local-objects/${encodeURIComponent(fileKey)}`;
   }
 
   return getSignedUrl(

@@ -10,15 +10,42 @@ import { getLocalObject, putLocalObject } from './data';
 import { loadDemoListings } from './data/seed';
 
 process.env.DATA_STORE = process.env.DATA_STORE || 'memory';
-process.env.API_LOCAL_MODE = 'true';
+if (process.env.API_LOCAL_MODE === undefined) {
+  // Production must never trust caller-supplied identity headers by default,
+  // even if the process was started without an explicit mode.
+  process.env.API_LOCAL_MODE =
+    process.env.NODE_ENV === 'production'
+      ? 'false'
+      : process.env.DATA_STORE === 'memory'
+        ? 'true'
+        : 'false';
+}
 
-const PORT = Number(process.env.API_PORT || 3001);
-const CORS_ORIGIN = process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:3000';
+const PORT = Number(process.env.PORT || process.env.API_PORT || 3001);
+const CORS_ORIGINS = (process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:3000')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 loadDemoListings();
 
-function setCors(res: ServerResponse): void {
-  res.setHeader('Access-Control-Allow-Origin', CORS_ORIGIN);
+function setCors(req: IncomingMessage, res: ServerResponse): void {
+  const requestOrigin = req.headers.origin;
+  const allowAll = CORS_ORIGINS.includes('*');
+  const allowedOrigin = allowAll
+    ? '*'
+    : requestOrigin && CORS_ORIGINS.includes(requestOrigin)
+      ? requestOrigin
+      : undefined;
+
+  if (allowedOrigin) {
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+    if (allowedOrigin !== '*') {
+      res.setHeader('Vary', 'Origin');
+    }
+  } else {
+    res.removeHeader('Access-Control-Allow-Origin');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
   res.setHeader(
     'Access-Control-Allow-Headers',
@@ -50,7 +77,12 @@ function toEvent(
   if (parts[0] === 'api' && parts[1] === 'v1') {
     parts.splice(0, 2);
   }
-  if (parts[0] === 'listings' && parts[1] && parts[1] !== 'search') {
+  if (
+    parts[0] === 'listings' &&
+    parts[1] &&
+    parts[1] !== 'search' &&
+    parts[1] !== 'mine'
+  ) {
     pathParameters.id = parts[1];
   }
   if (parts[0] === 'leases' && parts[1] && parts[1] !== 'upload-url') {
@@ -103,7 +135,7 @@ function toEvent(
 }
 
 function routeHandler(pathname: string) {
-  if (pathname === '/health') {
+  if (pathname === '/health' || pathname === '/api/v1/health') {
     return healthHandler;
   }
   if (pathname.includes('/auth')) {
@@ -122,7 +154,7 @@ function routeHandler(pathname: string) {
 }
 
 const server = createServer(async (req, res) => {
-  setCors(res);
+  setCors(req, res);
 
   if (req.method === 'OPTIONS') {
     res.statusCode = 204;
@@ -174,6 +206,9 @@ const server = createServer(async (req, res) => {
     for (const [key, value] of Object.entries(result.headers || {})) {
       res.setHeader(key, String(value));
     }
+    // Re-apply CORS after handler headers so the configured origin list wins
+    // over the wildcard headers used by the Lambda response helpers.
+    setCors(req, res);
     res.end(result.body);
   } catch (error) {
     console.error(error);
@@ -189,5 +224,7 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`RentVision local API listening on http://localhost:${PORT}`);
+  console.log(
+    `RentVision API listening on port ${PORT} (store=${process.env.DATA_STORE}, localMode=${process.env.API_LOCAL_MODE})`
+  );
 });
