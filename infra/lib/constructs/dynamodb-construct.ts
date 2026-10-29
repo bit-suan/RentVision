@@ -103,6 +103,13 @@ export class RentVisionDynamoDb extends Construct {
       encryption: dynamodb.TableEncryption.AWS_MANAGED,
     });
 
+    // Email lookup index used by the auth handler (login / signup)
+    this.usersTable.addGlobalSecondaryIndex({
+      indexName: 'emailIndex',
+      partitionKey: { name: 'email', type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
+
     // -------------------------------------------------------------------------
     // Leases Table
     // -------------------------------------------------------------------------

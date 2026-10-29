@@ -500,10 +500,42 @@ async function handleGeoSearch(
   const lngStr = params.lng || params.longitude;
   const radiusStr = params.radiusKm || params.radius;
 
+  // Filters shared by "browse" (no coordinates) and radius search.
+  const propertyTypeParam = params.propertyType
+    ? (params.propertyType.toLowerCase() as PropertyType)
+    : undefined;
+  const minPriceParam = params.minPrice ? parseFloat(params.minPrice) : undefined;
+  const maxPriceParam = params.maxPrice ? parseFloat(params.maxPrice) : undefined;
+  const bedroomsParam = params.bedrooms ? parseInt(params.bedrooms, 10) : undefined;
+  const limitParam = Math.min(
+    Math.max(1, params.limit ? parseInt(params.limit, 10) || 50 : 50),
+    100
+  );
+  const offsetParam = Math.max(0, params.offset ? parseInt(params.offset, 10) || 0 : 0);
+
+  // No coordinates: browse all approved listings (newest first) with filters,
+  // instead of rejecting the request.
+  if (!latStr && !lngStr) {
+    const all = await listActiveListings(100);
+    const filtered = all.items.filter(
+      (item) =>
+        (!propertyTypeParam || item.propertyType === propertyTypeParam) &&
+        (minPriceParam === undefined || item.price >= minPriceParam) &&
+        (maxPriceParam === undefined || item.price <= maxPriceParam) &&
+        (bedroomsParam === undefined || item.bedrooms === bedroomsParam)
+    );
+    const page = filtered.slice(offsetParam, offsetParam + limitParam);
+    const browseResponse: ListingSearchResponse = {
+      items: page,
+      count: filtered.length,
+    };
+    return successResponse(browseResponse);
+  }
+
   if (!latStr || !lngStr) {
     return errorResponse(
       'VALIDATION_ERROR',
-      'Query parameters latitude (or lat) and longitude (or lng) are required',
+      'Query parameters latitude (or lat) and longitude (or lng) must be provided together',
       400
     );
   }
@@ -526,10 +558,10 @@ async function handleGeoSearch(
     return errorResponse('VALIDATION_ERROR', 'radiusKm must be a positive number', 400);
   }
 
-  const propertyType = params.propertyType as PropertyType | undefined;
-  const minPrice = params.minPrice ? parseFloat(params.minPrice) : undefined;
-  const maxPrice = params.maxPrice ? parseFloat(params.maxPrice) : undefined;
-  const limit = params.limit ? parseInt(params.limit, 10) : 50;
+  const propertyType = propertyTypeParam;
+  const minPrice = minPriceParam;
+  const maxPrice = maxPriceParam;
+  const limit = limitParam;
 
   const candidateGeohashes = getBoundingBoxGeohashes(lat, lng, radiusKm, 5);
   const candidateMap = new Map<string, Listing>();
@@ -556,6 +588,9 @@ async function handleGeoSearch(
     if (maxPrice !== undefined && item.price > maxPrice) {
       continue;
     }
+    if (bedroomsParam !== undefined && item.bedrooms !== bedroomsParam) {
+      continue;
+    }
 
     const distance = haversineDistance(lat, lng, item.latitude, item.longitude);
     if (distance <= radiusKm) {
@@ -567,7 +602,7 @@ async function handleGeoSearch(
   }
 
   matchingListings.sort((a, b) => a.distanceKm - b.distanceKm);
-  const paginatedListings = matchingListings.slice(0, Math.max(1, limit));
+  const paginatedListings = matchingListings.slice(offsetParam, offsetParam + Math.max(1, limit));
 
   const response: ListingSearchResponse = {
     items: paginatedListings,

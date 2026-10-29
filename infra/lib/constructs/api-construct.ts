@@ -70,6 +70,8 @@ export class RentVisionApi extends Construct {
   public readonly leaseHandler: lambdaNodejs.NodejsFunction;
   /** Lambda function for health check. */
   public readonly healthHandler: lambdaNodejs.NodejsFunction;
+  /** Lambda function for email/password signup, login and session lookup. */
+  public readonly authHandler: lambdaNodejs.NodejsFunction;
 
   constructor(scope: Construct, id: string, props: RentVisionApiProps) {
     super(scope, id);
@@ -114,6 +116,23 @@ export class RentVisionApi extends Construct {
     });
 
     // -------------------------------------------------------------------------
+    // Lambda: Auth Handler
+    // -------------------------------------------------------------------------
+    this.authHandler = new lambdaNodejs.NodejsFunction(this, 'AuthHandler', {
+      ...lambdaDefaults,
+      functionName: `rentvision-auth-${props.environment}`,
+      description: 'Email/password signup, login and session lookup',
+      entry: path.join(handlersPath, 'auth.ts'),
+      handler: 'handler',
+      environment: {
+        DYNAMODB_USERS_TABLE: props.usersTable.tableName,
+        USERS_EMAIL_INDEX_NAME: 'emailIndex',
+        NODE_OPTIONS: '--enable-source-maps',
+      },
+    });
+    props.usersTable.grantReadWriteData(this.authHandler);
+
+    // -------------------------------------------------------------------------
     // Lambda: Listings Handler
     // -------------------------------------------------------------------------
     this.listingsHandler = new lambdaNodejs.NodejsFunction(this, 'ListingsHandler', {
@@ -126,12 +145,15 @@ export class RentVisionApi extends Construct {
         DYNAMODB_PROPERTIES_TABLE: props.propertiesTable.tableName,
         LISTINGS_GEO_INDEX_NAME: props.geoIndexName,
         LISTINGS_STATUS_INDEX_NAME: props.statusIndexName,
+        S3_PROPERTY_MEDIA_BUCKET: props.mediaBucket.bucketName,
         NODE_OPTIONS: '--enable-source-maps',
       },
     });
 
     // Least-privilege: read/write on properties table and its indexes
     props.propertiesTable.grantReadWriteData(this.listingsHandler);
+    // Needed to sign download URLs for 360 panorama scenes in GET /listings/{id}
+    props.mediaBucket.grantRead(this.listingsHandler);
 
     // CloudWatch log group with retention policy
     new logs.LogGroup(this, 'ListingsHandlerLogs', {
@@ -215,6 +237,8 @@ export class RentVisionApi extends Construct {
           'X-Api-Key',
           'X-Amz-Security-Token',
           'X-Request-Id',
+          'X-User-Id',
+          'X-User-Role',
         ],
         maxAge: cdk.Duration.hours(1),
       },
@@ -247,6 +271,27 @@ export class RentVisionApi extends Construct {
     // -------------------------------------------------------------------------
     // API Routes
     // -------------------------------------------------------------------------
+
+    // Auth routes (Public: these issue the session)
+    const authIntegration = new apigatewayv2Integrations.HttpLambdaIntegration(
+      'AuthIntegration',
+      this.authHandler,
+    );
+    this.httpApi.addRoutes({
+      path: '/auth/signup',
+      methods: [apigatewayv2.HttpMethod.POST],
+      integration: authIntegration,
+    });
+    this.httpApi.addRoutes({
+      path: '/auth/login',
+      methods: [apigatewayv2.HttpMethod.POST],
+      integration: authIntegration,
+    });
+    this.httpApi.addRoutes({
+      path: '/auth/me',
+      methods: [apigatewayv2.HttpMethod.GET],
+      integration: authIntegration,
+    });
 
     // Health route (Public)
     this.httpApi.addRoutes({

@@ -1,7 +1,6 @@
 import Button from "@/components/ui/Button";
 import SearchNearMeButton from "@/components/home/SearchNearMeButton";
-import PropertyCard from "@/components/property/PropertyCard";
-import { getProperties } from "@/lib/properties";
+import FeaturedListings from "@/components/home/FeaturedListings";
 import { routing } from "@/i18n/routing";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/routing";
@@ -106,7 +105,6 @@ export default async function Home({ params }: HomePageProps) {
   setRequestLocale(locale);
 
   const t = await getTranslations({ locale, namespace: "Landing" });
-  const properties = getProperties().slice(0, 4);
 
   return (
     <div className="landing-page">
@@ -265,11 +263,7 @@ export default async function Home({ params }: HomePageProps) {
             </svg>
           </Link>
         </div>
-        <div className="property-grid">
-          {properties.map((property) => (
-            <PropertyCard key={property.id} property={property} />
-          ))}
-        </div>
+        <FeaturedListings limit={4} />
       </section>
 
       {/* 360 Virtual Tour Spotlight Section (Matches Screenshot 2) */}

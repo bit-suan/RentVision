@@ -23,8 +23,10 @@ function verifyPassword(password: string, combined: string): boolean {
 export const handler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
-  const method = event.httpMethod || 'GET';
-  const path = event.path || '';
+  // Support both REST (v1) and HTTP API (v2) event shapes
+  const http = (event.requestContext as unknown as { http?: { method?: string; path?: string } })?.http;
+  const method = (event.httpMethod || http?.method || 'GET').toUpperCase();
+  const path = event.path || http?.path || '';
 
   // Preflight
   if (method === 'OPTIONS') {

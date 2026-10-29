@@ -42,14 +42,12 @@ export const authConfig = {
 };
 
 /**
- * Local development auth is only enabled when Cognito is not configured and
- * the web app is pointed at a local API. Production builds use Cognito, and
- * the API only accepts the development headers in local/test mode.
+ * Backend email/password auth (/auth/signup and /auth/login) is used whenever
+ * Cognito is not configured. It works with both the local API and the
+ * deployed API Gateway URL.
  */
 export function isLocalAuthMode(): boolean {
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || '';
-  const isLocalApi = /localhost|127\.0\.0\.1/.test(apiBase);
-  return !authConfig.Cognito.userPoolId && !authConfig.Cognito.userPoolClientId && isLocalApi;
+  return !authConfig.Cognito.userPoolId && !authConfig.Cognito.userPoolClientId;
 }
 
 export function hasLocalAuthSession(): boolean {
@@ -74,8 +72,8 @@ export function clearLocalAuthSession(): void {
 }
 
 export function configureAuth() {
-  // Amplify throws on an empty Cognito configuration. Local development uses
-  // the demo session instead, so only configure Amplify when credentials exist.
+  // Amplify throws on an empty Cognito configuration. Backend auth uses the
+  // saved session instead, so only configure Amplify when credentials exist.
   if (!authConfig.Cognito.userPoolId || !authConfig.Cognito.userPoolClientId) {
     return;
   }

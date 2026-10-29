@@ -77,8 +77,48 @@ describe('listings handler', () => {
     expect(body.data.items[0].distanceKm).toBeDefined();
   });
 
-  test('rejects search without coordinates', async () => {
+  test('browses all approved listings when no coordinates are given', async () => {
     const result = await handler(event('GET', '/listings/search'));
+    expect(result.statusCode).toBe(200);
+    const body = JSON.parse(result.body);
+    expect(body.data.count).toBeGreaterThan(1);
+    expect(body.data.items.length).toBe(body.data.count);
+  });
+
+  test('browse search applies price, bedroom and type filters', async () => {
+    const cheap = await handler(
+      event('GET', '/listings/search', { maxPrice: '33000' })
+    );
+    const cheapItems = JSON.parse(cheap.body).data.items;
+    expect(cheapItems.length).toBeGreaterThan(0);
+    expect(cheapItems.every((l: { price: number }) => l.price <= 33000)).toBe(true);
+
+    const villas = await handler(
+      event('GET', '/listings/search', { propertyType: 'Villa' })
+    );
+    const villaItems = JSON.parse(villas.body).data.items;
+    expect(villaItems.every((l: { propertyType: string }) => l.propertyType === 'villa')).toBe(true);
+
+    const twoBed = await handler(
+      event('GET', '/listings/search', { bedrooms: '2' })
+    );
+    const twoBedItems = JSON.parse(twoBed.body).data.items;
+    expect(twoBedItems.every((l: { bedrooms: number }) => l.bedrooms === 2)).toBe(true);
+  });
+
+  test('browse search paginates with limit and offset', async () => {
+    const first = JSON.parse(
+      (await handler(event('GET', '/listings/search', { limit: '2' }))).body
+    ).data;
+    const second = JSON.parse(
+      (await handler(event('GET', '/listings/search', { limit: '2', offset: '2' }))).body
+    ).data;
+    expect(first.items.length).toBe(2);
+    expect(second.items[0].listingId).not.toBe(first.items[0].listingId);
+  });
+
+  test('rejects a search with only one coordinate', async () => {
+    const result = await handler(event('GET', '/listings/search', { lat: '9.0' }));
     expect(result.statusCode).toBe(400);
   });
 
